@@ -44,7 +44,7 @@ const Locations: React.FC = () => {
       title: 'Actions',
       key: 'actions',
       width: 120,
-      render: (_, record: Location) => (
+      render: (_: any, record: Location) => (
         <Space>
           <Button
             type="text"

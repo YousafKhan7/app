@@ -14,7 +14,7 @@ import {
 } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { apiService } from '../../api';
-import type { Currency, CurrencyCreate } from '../../api';
+import type { Currency } from '../../api';
 import dayjs from 'dayjs';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
 import ErrorToast from '../../components/ErrorDisplay/ErrorToast';
@@ -55,7 +55,7 @@ const Currencies: React.FC = () => {
       title: 'Actions',
       key: 'actions',
       width: 120,
-      render: (_, record: Currency) => (
+      render: (_: any, record: Currency) => (
         <Space>
           <Button
             type="text"

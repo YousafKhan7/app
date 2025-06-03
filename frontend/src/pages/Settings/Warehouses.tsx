@@ -52,7 +52,7 @@ const Warehouses: React.FC = () => {
       title: 'Actions',
       key: 'actions',
       width: 120,
-      render: (_, record: Warehouse) => (
+      render: (_: any, record: Warehouse) => (
         <Space>
           <Button
             type="text"

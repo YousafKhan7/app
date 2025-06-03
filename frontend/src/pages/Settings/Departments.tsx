@@ -44,7 +44,7 @@ const Departments: React.FC = () => {
       title: 'Actions',
       key: 'actions',
       width: 120,
-      render: (_, record: Department) => (
+      render: (_: any, record: Department) => (
         <Space>
           <Button
             type="text"
