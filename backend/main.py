@@ -2,8 +2,9 @@ from fastapi import FastAPI, HTTPException, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-import mysql.connector
-from mysql.connector import Error
+import psycopg2
+from psycopg2.extras import RealDictCursor
+from psycopg2 import Error
 import os
 import shutil
 from pathlib import Path
@@ -34,13 +35,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Database configuration
+# Database configuration for PostgreSQL/Supabase
 DB_CONFIG = {
     'host': os.getenv('DB_HOST', 'localhost'),
-    'database': os.getenv('DB_NAME', 'app'),
-    'user': os.getenv('DB_USER', 'root'),
+    'database': os.getenv('DB_NAME', 'postgres'),
+    'user': os.getenv('DB_USER', 'postgres'),
     'password': os.getenv('DB_PASSWORD', ''),
-    'port': int(os.getenv('DB_PORT', 3306))
+    'port': int(os.getenv('DB_PORT', 5432))
 }
 
 # Pydantic models
@@ -142,11 +143,38 @@ class WarehouseCreate(BaseModel):
 # Database connection helper
 def get_db_connection():
     try:
-        connection = mysql.connector.connect(**DB_CONFIG)
+        connection = psycopg2.connect(**DB_CONFIG)
         return connection
     except Error as e:
-        print(f"Error connecting to MySQL: {e}")
+        print(f"Error connecting to PostgreSQL: {e}")
         return None
+
+# Helper function to execute queries with proper cursor
+def execute_query(query, params=None, fetch_one=False, fetch_all=False):
+    try:
+        connection = get_db_connection()
+        if not connection:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+        
+        cursor = connection.cursor(cursor_factory=RealDictCursor)
+        cursor.execute(query, params)
+        
+        result = None
+        if fetch_one:
+            result = cursor.fetchone()
+        elif fetch_all:
+            result = cursor.fetchall()
+        
+        connection.commit()
+        cursor.close()
+        connection.close()
+        
+        return result
+    except Error as e:
+        if connection:
+            connection.rollback()
+            connection.close()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 # API Routes
 @app.get("/")
@@ -157,7 +185,7 @@ async def root():
 async def health_check():
     try:
         connection = get_db_connection()
-        if connection and connection.is_connected():
+        if connection and not connection.closed:
             connection.close()
             return {"status": "healthy", "database": "connected"}
         else:
@@ -165,651 +193,215 @@ async def health_check():
     except Exception as e:
         return {"status": "unhealthy", "error": str(e)}
 
+# Users endpoints
 @app.get("/users")
 async def get_users():
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-        
-        cursor = connection.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM users")
-        users = cursor.fetchall()
-        
-        cursor.close()
-        connection.close()
-        
-        return {"users": users}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    users = execute_query("SELECT * FROM users", fetch_all=True)
+    return {"users": users}
 
 @app.post("/users")
 async def create_user(user: UserCreate):
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
-        cursor = connection.cursor()
-        query = "INSERT INTO users (name, email) VALUES (%s, %s)"
-        cursor.execute(query, (user.name, user.email))
-        connection.commit()
-
-        user_id = cursor.lastrowid
-        cursor.close()
-        connection.close()
-
-        return {"message": "User created successfully", "user_id": user_id}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    query = "INSERT INTO users (name, email) VALUES (%s, %s) RETURNING id"
+    result = execute_query(query, (user.name, user.email), fetch_one=True)
+    return {"message": "User created successfully", "user_id": result['id']}
 
 @app.put("/users/{user_id}")
 async def update_user(user_id: int, user: UserCreate):
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
-        cursor = connection.cursor()
-        query = "UPDATE users SET name=%s, email=%s WHERE id=%s"
-        cursor.execute(query, (user.name, user.email, user_id))
-        connection.commit()
-
-        cursor.close()
-        connection.close()
-
-        return {"message": "User updated successfully"}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    query = "UPDATE users SET name=%s, email=%s WHERE id=%s"
+    execute_query(query, (user.name, user.email, user_id))
+    return {"message": "User updated successfully"}
 
 @app.delete("/users/{user_id}")
 async def delete_user(user_id: int):
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
-        cursor = connection.cursor()
-        cursor.execute("DELETE FROM users WHERE id=%s", (user_id,))
-        connection.commit()
-
-        cursor.close()
-        connection.close()
-
-        return {"message": "User deleted successfully"}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
-
-# Chart of Accounts endpoints
-@app.get("/chart-of-accounts")
-async def get_chart_of_accounts():
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
-        cursor = connection.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM chart_of_accounts ORDER BY number")
-        accounts = cursor.fetchall()
-
-        cursor.close()
-        connection.close()
-
-        return {"accounts": accounts}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
-
-@app.post("/chart-of-accounts")
-async def create_chart_of_account(account: ChartOfAccountCreate):
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
-        cursor = connection.cursor()
-        query = "INSERT INTO chart_of_accounts (number, description, inactive, sub_account, type_id, currency_id) VALUES (%s, %s, %s, %s, %s, %s)"
-        cursor.execute(query, (account.number, account.description, account.inactive, account.sub_account, account.type_id, account.currency_id))
-        connection.commit()
-
-        account_id = cursor.lastrowid
-        cursor.close()
-        connection.close()
-
-        return {"message": "Account created successfully", "account_id": account_id}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
-
-@app.put("/chart-of-accounts/{account_id}")
-async def update_chart_of_account(account_id: int, account: ChartOfAccountCreate):
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
-        cursor = connection.cursor()
-        query = "UPDATE chart_of_accounts SET number=%s, description=%s, inactive=%s, sub_account=%s, type_id=%s, currency_id=%s WHERE id=%s"
-        cursor.execute(query, (account.number, account.description, account.inactive, account.sub_account, account.type_id, account.currency_id, account_id))
-        connection.commit()
-
-        cursor.close()
-        connection.close()
-
-        return {"message": "Account updated successfully"}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
-
-@app.delete("/chart-of-accounts/{account_id}")
-async def delete_chart_of_account(account_id: int):
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
-        cursor = connection.cursor()
-        cursor.execute("DELETE FROM chart_of_accounts WHERE id=%s", (account_id,))
-        connection.commit()
-
-        cursor.close()
-        connection.close()
-
-        return {"message": "Account deleted successfully"}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    query = "DELETE FROM users WHERE id=%s"
+    execute_query(query, (user_id,))
+    return {"message": "User deleted successfully"}
 
 # Account Types endpoints
 @app.get("/account-types")
 async def get_account_types():
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
-        cursor = connection.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM account_types ORDER BY name")
-        account_types = cursor.fetchall()
-
-        cursor.close()
-        connection.close()
-
-        return {"account_types": account_types}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    account_types = execute_query("SELECT * FROM account_types ORDER BY name", fetch_all=True)
+    return {"account_types": account_types}
 
 @app.post("/account-types")
 async def create_account_type(account_type: AccountTypeCreate):
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
+    query = "INSERT INTO account_types (name, description) VALUES (%s, %s) RETURNING id"
+    result = execute_query(query, (account_type.name, account_type.description), fetch_one=True)
+    return {"message": "Account type created successfully", "account_type_id": result['id']}
 
-        cursor = connection.cursor()
-        query = "INSERT INTO account_types (name, description) VALUES (%s, %s)"
-        cursor.execute(query, (account_type.name, account_type.description))
-        connection.commit()
+# Chart of Accounts endpoints
+@app.get("/chart-of-accounts")
+async def get_chart_of_accounts():
+    accounts = execute_query("SELECT * FROM chart_of_accounts ORDER BY number", fetch_all=True)
+    return {"accounts": accounts}
 
-        account_type_id = cursor.lastrowid
-        cursor.close()
-        connection.close()
+@app.post("/chart-of-accounts")
+async def create_chart_of_account(account: ChartOfAccountCreate):
+    query = """INSERT INTO chart_of_accounts 
+               (number, description, inactive, sub_account, type_id, currency_id) 
+               VALUES (%s, %s, %s, %s, %s, %s) RETURNING id"""
+    result = execute_query(query, (account.number, account.description, account.inactive, 
+                                 account.sub_account, account.type_id, account.currency_id), fetch_one=True)
+    return {"message": "Account created successfully", "account_id": result['id']}
 
-        return {"message": "Account type created successfully", "account_type_id": account_type_id}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+@app.put("/chart-of-accounts/{account_id}")
+async def update_chart_of_account(account_id: int, account: ChartOfAccountCreate):
+    query = """UPDATE chart_of_accounts 
+               SET number=%s, description=%s, inactive=%s, sub_account=%s, type_id=%s, currency_id=%s 
+               WHERE id=%s"""
+    execute_query(query, (account.number, account.description, account.inactive, 
+                         account.sub_account, account.type_id, account.currency_id, account_id))
+    return {"message": "Account updated successfully"}
+
+@app.delete("/chart-of-accounts/{account_id}")
+async def delete_chart_of_account(account_id: int):
+    query = "DELETE FROM chart_of_accounts WHERE id=%s"
+    execute_query(query, (account_id,))
+    return {"message": "Account deleted successfully"}
 
 # Departments endpoints
 @app.get("/departments")
 async def get_departments():
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
-        cursor = connection.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM departments ORDER BY number")
-        departments = cursor.fetchall()
-
-        cursor.close()
-        connection.close()
-
-        return {"departments": departments}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    departments = execute_query("SELECT * FROM departments ORDER BY number", fetch_all=True)
+    return {"departments": departments}
 
 @app.post("/departments")
 async def create_department(department: DepartmentCreate):
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
-        cursor = connection.cursor()
-        query = "INSERT INTO departments (number, name) VALUES (%s, %s)"
-        cursor.execute(query, (department.number, department.name))
-        connection.commit()
-
-        department_id = cursor.lastrowid
-        cursor.close()
-        connection.close()
-
-        return {"message": "Department created successfully", "department_id": department_id}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    query = "INSERT INTO departments (number, name) VALUES (%s, %s) RETURNING id"
+    result = execute_query(query, (department.number, department.name), fetch_one=True)
+    return {"message": "Department created successfully", "department_id": result['id']}
 
 @app.put("/departments/{department_id}")
 async def update_department(department_id: int, department: DepartmentCreate):
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
-        cursor = connection.cursor()
-        query = "UPDATE departments SET number=%s, name=%s WHERE id=%s"
-        cursor.execute(query, (department.number, department.name, department_id))
-        connection.commit()
-
-        cursor.close()
-        connection.close()
-
-        return {"message": "Department updated successfully"}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    query = "UPDATE departments SET number=%s, name=%s WHERE id=%s"
+    execute_query(query, (department.number, department.name, department_id))
+    return {"message": "Department updated successfully"}
 
 @app.delete("/departments/{department_id}")
 async def delete_department(department_id: int):
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
-        cursor = connection.cursor()
-        cursor.execute("DELETE FROM departments WHERE id=%s", (department_id,))
-        connection.commit()
-
-        cursor.close()
-        connection.close()
-
-        return {"message": "Department deleted successfully"}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
-
-# Currencies endpoints
-@app.get("/currencies")
-async def get_currencies():
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
-        cursor = connection.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM currencies ORDER BY currency")
-        currencies = cursor.fetchall()
-
-        cursor.close()
-        connection.close()
-
-        return {"currencies": currencies}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
-
-@app.post("/currencies")
-async def create_currency(currency: CurrencyCreate):
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
-        cursor = connection.cursor()
-        query = "INSERT INTO currencies (currency, rate, effective_date) VALUES (%s, %s, %s)"
-        cursor.execute(query, (currency.currency, currency.rate, currency.effective_date))
-        connection.commit()
-
-        currency_id = cursor.lastrowid
-        cursor.close()
-        connection.close()
-
-        return {"message": "Currency created successfully", "currency_id": currency_id}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
-
-@app.put("/currencies/{currency_id}")
-async def update_currency(currency_id: int, currency: CurrencyCreate):
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
-        cursor = connection.cursor()
-        query = "UPDATE currencies SET currency=%s, rate=%s, effective_date=%s WHERE id=%s"
-        cursor.execute(query, (currency.currency, currency.rate, currency.effective_date, currency_id))
-        connection.commit()
-
-        cursor.close()
-        connection.close()
-
-        return {"message": "Currency updated successfully"}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
-
-@app.delete("/currencies/{currency_id}")
-async def delete_currency(currency_id: int):
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
-        cursor = connection.cursor()
-        cursor.execute("DELETE FROM currencies WHERE id=%s", (currency_id,))
-        connection.commit()
-
-        cursor.close()
-        connection.close()
-
-        return {"message": "Currency deleted successfully"}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    query = "DELETE FROM departments WHERE id=%s"
+    execute_query(query, (department_id,))
+    return {"message": "Department deleted successfully"}
 
 # Locations endpoints
 @app.get("/locations")
 async def get_locations():
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
-        cursor = connection.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM locations ORDER BY number")
-        locations = cursor.fetchall()
-
-        cursor.close()
-        connection.close()
-
-        return {"locations": locations}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    locations = execute_query("SELECT * FROM locations ORDER BY number", fetch_all=True)
+    return {"locations": locations}
 
 @app.post("/locations")
 async def create_location(location: LocationCreate):
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
-        cursor = connection.cursor()
-        query = "INSERT INTO locations (number, name) VALUES (%s, %s)"
-        cursor.execute(query, (location.number, location.name))
-        connection.commit()
-
-        location_id = cursor.lastrowid
-        cursor.close()
-        connection.close()
-
-        return {"message": "Location created successfully", "location_id": location_id}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    query = "INSERT INTO locations (number, name) VALUES (%s, %s) RETURNING id"
+    result = execute_query(query, (location.number, location.name), fetch_one=True)
+    return {"message": "Location created successfully", "location_id": result['id']}
 
 @app.put("/locations/{location_id}")
 async def update_location(location_id: int, location: LocationCreate):
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
-        cursor = connection.cursor()
-        query = "UPDATE locations SET number=%s, name=%s WHERE id=%s"
-        cursor.execute(query, (location.number, location.name, location_id))
-        connection.commit()
-
-        cursor.close()
-        connection.close()
-
-        return {"message": "Location updated successfully"}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    query = "UPDATE locations SET number=%s, name=%s WHERE id=%s"
+    execute_query(query, (location.number, location.name, location_id))
+    return {"message": "Location updated successfully"}
 
 @app.delete("/locations/{location_id}")
 async def delete_location(location_id: int):
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
+    query = "DELETE FROM locations WHERE id=%s"
+    execute_query(query, (location_id,))
+    return {"message": "Location deleted successfully"}
 
-        cursor = connection.cursor()
-        cursor.execute("DELETE FROM locations WHERE id=%s", (location_id,))
-        connection.commit()
+# Currencies endpoints
+@app.get("/currencies")
+async def get_currencies():
+    currencies = execute_query("SELECT * FROM currencies ORDER BY currency", fetch_all=True)
+    return {"currencies": currencies}
 
-        cursor.close()
-        connection.close()
+@app.post("/currencies")
+async def create_currency(currency: CurrencyCreate):
+    query = "INSERT INTO currencies (currency, rate, effective_date) VALUES (%s, %s, %s) RETURNING id"
+    result = execute_query(query, (currency.currency, currency.rate, currency.effective_date), fetch_one=True)
+    return {"message": "Currency created successfully", "currency_id": result['id']}
 
-        return {"message": "Location deleted successfully"}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+@app.put("/currencies/{currency_id}")
+async def update_currency(currency_id: int, currency: CurrencyCreate):
+    query = "UPDATE currencies SET currency=%s, rate=%s, effective_date=%s WHERE id=%s"
+    execute_query(query, (currency.currency, currency.rate, currency.effective_date, currency_id))
+    return {"message": "Currency updated successfully"}
+
+@app.delete("/currencies/{currency_id}")
+async def delete_currency(currency_id: int):
+    query = "DELETE FROM currencies WHERE id=%s"
+    execute_query(query, (currency_id,))
+    return {"message": "Currency deleted successfully"}
 
 # Manufacturers endpoints
 @app.get("/manufacturers")
 async def get_manufacturers():
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
-        cursor = connection.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM manufacturers ORDER BY sorting")
-        manufacturers = cursor.fetchall()
-
-        cursor.close()
-        connection.close()
-
-        return {"manufacturers": manufacturers}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    manufacturers = execute_query("SELECT * FROM manufacturers ORDER BY sorting", fetch_all=True)
+    return {"manufacturers": manufacturers}
 
 @app.post("/manufacturers")
 async def create_manufacturer(manufacturer: ManufacturerCreate):
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
-        cursor = connection.cursor()
-        query = "INSERT INTO manufacturers (name, logo_file, sorting) VALUES (%s, %s, %s)"
-        cursor.execute(query, (manufacturer.name, manufacturer.logo_file, manufacturer.sorting))
-        connection.commit()
-
-        manufacturer_id = cursor.lastrowid
-        cursor.close()
-        connection.close()
-
-        return {"message": "Manufacturer created successfully", "manufacturer_id": manufacturer_id}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    query = "INSERT INTO manufacturers (name, logo_file, sorting) VALUES (%s, %s, %s) RETURNING id"
+    result = execute_query(query, (manufacturer.name, manufacturer.logo_file, manufacturer.sorting), fetch_one=True)
+    return {"message": "Manufacturer created successfully", "manufacturer_id": result['id']}
 
 @app.put("/manufacturers/{manufacturer_id}")
 async def update_manufacturer(manufacturer_id: int, manufacturer: ManufacturerCreate):
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
-        cursor = connection.cursor()
-        query = "UPDATE manufacturers SET name=%s, logo_file=%s, sorting=%s WHERE id=%s"
-        cursor.execute(query, (manufacturer.name, manufacturer.logo_file, manufacturer.sorting, manufacturer_id))
-        connection.commit()
-
-        cursor.close()
-        connection.close()
-
-        return {"message": "Manufacturer updated successfully"}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    query = "UPDATE manufacturers SET name=%s, logo_file=%s, sorting=%s WHERE id=%s"
+    execute_query(query, (manufacturer.name, manufacturer.logo_file, manufacturer.sorting, manufacturer_id))
+    return {"message": "Manufacturer updated successfully"}
 
 @app.delete("/manufacturers/{manufacturer_id}")
 async def delete_manufacturer(manufacturer_id: int):
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
-        cursor = connection.cursor()
-        cursor.execute("DELETE FROM manufacturers WHERE id=%s", (manufacturer_id,))
-        connection.commit()
-
-        cursor.close()
-        connection.close()
-
-        return {"message": "Manufacturer deleted successfully"}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    query = "DELETE FROM manufacturers WHERE id=%s"
+    execute_query(query, (manufacturer_id,))
+    return {"message": "Manufacturer deleted successfully"}
 
 # Teams endpoints
 @app.get("/teams")
 async def get_teams():
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
-        cursor = connection.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM teams ORDER BY name")
-        teams = cursor.fetchall()
-
-        cursor.close()
-        connection.close()
-
-        return {"teams": teams}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    teams = execute_query("SELECT * FROM teams ORDER BY name", fetch_all=True)
+    return {"teams": teams}
 
 @app.post("/teams")
 async def create_team(team: TeamCreate):
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
-        cursor = connection.cursor()
-        query = "INSERT INTO teams (name, description) VALUES (%s, %s)"
-        cursor.execute(query, (team.name, team.description))
-        connection.commit()
-
-        team_id = cursor.lastrowid
-        cursor.close()
-        connection.close()
-
-        return {"message": "Team created successfully", "team_id": team_id}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    query = "INSERT INTO teams (name, description) VALUES (%s, %s) RETURNING id"
+    result = execute_query(query, (team.name, team.description), fetch_one=True)
+    return {"message": "Team created successfully", "team_id": result['id']}
 
 @app.put("/teams/{team_id}")
 async def update_team(team_id: int, team: TeamCreate):
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
-        cursor = connection.cursor()
-        query = "UPDATE teams SET name=%s, description=%s WHERE id=%s"
-        cursor.execute(query, (team.name, team.description, team_id))
-        connection.commit()
-
-        cursor.close()
-        connection.close()
-
-        return {"message": "Team updated successfully"}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    query = "UPDATE teams SET name=%s, description=%s WHERE id=%s"
+    execute_query(query, (team.name, team.description, team_id))
+    return {"message": "Team updated successfully"}
 
 @app.delete("/teams/{team_id}")
 async def delete_team(team_id: int):
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
-        cursor = connection.cursor()
-        cursor.execute("DELETE FROM teams WHERE id=%s", (team_id,))
-        connection.commit()
-
-        cursor.close()
-        connection.close()
-
-        return {"message": "Team deleted successfully"}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    query = "DELETE FROM teams WHERE id=%s"
+    execute_query(query, (team_id,))
+    return {"message": "Team deleted successfully"}
 
 # Warehouses endpoints
 @app.get("/warehouses")
 async def get_warehouses():
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
-        cursor = connection.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM warehouses ORDER BY number")
-        warehouses = cursor.fetchall()
-
-        cursor.close()
-        connection.close()
-
-        return {"warehouses": warehouses}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    warehouses = execute_query("SELECT * FROM warehouses ORDER BY number", fetch_all=True)
+    return {"warehouses": warehouses}
 
 @app.post("/warehouses")
 async def create_warehouse(warehouse: WarehouseCreate):
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
-        cursor = connection.cursor()
-        query = "INSERT INTO warehouses (warehouse_name, number, markup) VALUES (%s, %s, %s)"
-        cursor.execute(query, (warehouse.warehouse_name, warehouse.number, warehouse.markup))
-        connection.commit()
-
-        warehouse_id = cursor.lastrowid
-        cursor.close()
-        connection.close()
-
-        return {"message": "Warehouse created successfully", "warehouse_id": warehouse_id}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    query = "INSERT INTO warehouses (warehouse_name, number, markup) VALUES (%s, %s, %s) RETURNING id"
+    result = execute_query(query, (warehouse.warehouse_name, warehouse.number, warehouse.markup), fetch_one=True)
+    return {"message": "Warehouse created successfully", "warehouse_id": result['id']}
 
 @app.put("/warehouses/{warehouse_id}")
 async def update_warehouse(warehouse_id: int, warehouse: WarehouseCreate):
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
-        cursor = connection.cursor()
-        query = "UPDATE warehouses SET warehouse_name=%s, number=%s, markup=%s WHERE id=%s"
-        cursor.execute(query, (warehouse.warehouse_name, warehouse.number, warehouse.markup, warehouse_id))
-        connection.commit()
-
-        cursor.close()
-        connection.close()
-
-        return {"message": "Warehouse updated successfully"}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    query = "UPDATE warehouses SET warehouse_name=%s, number=%s, markup=%s WHERE id=%s"
+    execute_query(query, (warehouse.warehouse_name, warehouse.number, warehouse.markup, warehouse_id))
+    return {"message": "Warehouse updated successfully"}
 
 @app.delete("/warehouses/{warehouse_id}")
 async def delete_warehouse(warehouse_id: int):
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
-        cursor = connection.cursor()
-        cursor.execute("DELETE FROM warehouses WHERE id=%s", (warehouse_id,))
-        connection.commit()
-
-        cursor.close()
-        connection.close()
-
-        return {"message": "Warehouse deleted successfully"}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    query = "DELETE FROM warehouses WHERE id=%s"
+    execute_query(query, (warehouse_id,))
+    return {"message": "Warehouse deleted successfully"}
 
 # File upload endpoint
 @app.post("/upload-image")
