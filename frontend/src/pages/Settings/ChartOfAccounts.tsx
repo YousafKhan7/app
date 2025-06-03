@@ -15,17 +15,19 @@ import {
 } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { apiService } from '../../api';
-import type { ChartOfAccount, ChartOfAccountCreate, Currency } from '../../api';
+import type { ChartOfAccount, ChartOfAccountCreate, Currency, AccountType, AccountTypeCreate } from '../../api';
 
 const { Title } = Typography;
 
 const ChartOfAccounts: React.FC = () => {
   const [data, setData] = useState<ChartOfAccount[]>([]);
   const [currencies, setCurrencies] = useState<Currency[]>([]);
+  const [accountTypes, setAccountTypes] = useState<AccountType[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<ChartOfAccount | null>(null);
   const [form] = Form.useForm();
+  const [newTypeName, setNewTypeName] = useState('');
 
   const columns = [
     {
@@ -41,9 +43,13 @@ const ChartOfAccounts: React.FC = () => {
     },
     {
       title: 'Type',
-      dataIndex: 'type',
-      key: 'type',
+      dataIndex: 'type_id',
+      key: 'type_id',
       width: 120,
+      render: (type_id: number) => {
+        const accountType = accountTypes.find(t => t.id === type_id);
+        return accountType ? accountType.name : '-';
+      },
     },
     {
       title: 'Currency',
@@ -121,9 +127,35 @@ const ChartOfAccounts: React.FC = () => {
     }
   };
 
+  const fetchAccountTypes = async () => {
+    try {
+      const accountTypesData = await apiService.getAccountTypes();
+      setAccountTypes(accountTypesData);
+    } catch (error) {
+      message.error('Failed to fetch account types');
+    }
+  };
+
+  const handleAddNewType = async () => {
+    if (!newTypeName.trim()) {
+      message.error('Please enter a type name');
+      return;
+    }
+
+    try {
+      await apiService.createAccountType({ name: newTypeName.trim() });
+      message.success('Account type added successfully');
+      setNewTypeName('');
+      fetchAccountTypes(); // Refresh the types list
+    } catch (error) {
+      message.error('Failed to add account type');
+    }
+  };
+
   useEffect(() => {
     fetchData();
     fetchCurrencies();
+    fetchAccountTypes();
   }, []);
 
   const handleAdd = () => {
@@ -223,16 +255,42 @@ const ChartOfAccounts: React.FC = () => {
           </Form.Item>
 
           <Form.Item
-            name="type"
+            name="type_id"
             label="Type"
             rules={[{ required: true, message: 'Please select account type' }]}
           >
-            <Select placeholder="Select account type">
-              <Select.Option value="Asset">Asset</Select.Option>
-              <Select.Option value="Liability">Liability</Select.Option>
-              <Select.Option value="Equity">Equity</Select.Option>
-              <Select.Option value="Revenue">Revenue</Select.Option>
-              <Select.Option value="Expense">Expense</Select.Option>
+            <Select
+              placeholder="Select account type"
+              dropdownRender={(menu) => (
+                <>
+                  {menu}
+                  <div style={{ padding: '8px 0' }}>
+                    <div style={{ display: 'flex', flexWrap: 'nowrap', padding: '0 8px' }}>
+                      <Input
+                        style={{ flex: 'auto' }}
+                        value={newTypeName}
+                        onChange={(e) => setNewTypeName(e.target.value)}
+                        placeholder="Enter new type name"
+                        onPressEnter={handleAddNewType}
+                      />
+                      <Button
+                        type="text"
+                        icon={<PlusOutlined />}
+                        onClick={handleAddNewType}
+                        style={{ marginLeft: 8 }}
+                      >
+                        Add
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              )}
+            >
+              {accountTypes.map(type => (
+                <Select.Option key={type.id} value={type.id}>
+                  {type.name}
+                </Select.Option>
+              ))}
             </Select>
           </Form.Item>
 

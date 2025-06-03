@@ -21,6 +21,15 @@ CREATE TABLE IF NOT EXISTS currencies (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
+-- Account Types table (must be created before chart_of_accounts due to foreign key)
+CREATE TABLE IF NOT EXISTS account_types (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50) NOT NULL UNIQUE,
+    description VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
 -- Chart of Accounts table
 CREATE TABLE IF NOT EXISTS chart_of_accounts (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -28,10 +37,11 @@ CREATE TABLE IF NOT EXISTS chart_of_accounts (
     description VARCHAR(255) NOT NULL,
     inactive BOOLEAN DEFAULT FALSE,
     sub_account VARCHAR(100),
-    type VARCHAR(50) NOT NULL,
+    type_id INT NOT NULL,
     currency_id INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (type_id) REFERENCES account_types(id) ON DELETE RESTRICT,
     FOREIGN KEY (currency_id) REFERENCES currencies(id) ON DELETE SET NULL
 );
 
@@ -95,6 +105,14 @@ INSERT INTO currencies (currency, rate, effective_date) VALUES
 ('EUR', 1.5000, '2024-01-01')
 ON DUPLICATE KEY UPDATE rate=VALUES(rate), effective_date=VALUES(effective_date);
 
+INSERT INTO account_types (name, description) VALUES
+('Asset', 'Resources owned by the company'),
+('Liability', 'Debts and obligations of the company'),
+('Equity', 'Owner\'s interest in the company'),
+('Revenue', 'Income generated from business operations'),
+('Expense', 'Costs incurred in business operations')
+ON DUPLICATE KEY UPDATE description=VALUES(description);
+
 INSERT INTO departments (number, name) VALUES
 ('001', 'Sales'),
 ('002', 'Marketing'),
@@ -107,11 +125,11 @@ INSERT INTO locations (number, name) VALUES
 ('LOC003', 'Branch Office')
 ON DUPLICATE KEY UPDATE name=VALUES(name);
 
-INSERT INTO chart_of_accounts (number, description, inactive, sub_account, type, currency_id) VALUES
-('1000', 'Cash', FALSE, 'Assets', 'Asset', 1),
-('1100', 'Accounts Receivable', FALSE, 'Assets', 'Asset', 1),
-('2000', 'Accounts Payable', FALSE, 'Liabilities', 'Liability', 1)
-ON DUPLICATE KEY UPDATE description=VALUES(description), type=VALUES(type), currency_id=VALUES(currency_id);
+INSERT INTO chart_of_accounts (number, description, inactive, sub_account, type_id, currency_id) VALUES
+('1000', 'Cash', FALSE, 'Assets', 1, 1),
+('1100', 'Accounts Receivable', FALSE, 'Assets', 1, 1),
+('2000', 'Accounts Payable', FALSE, 'Liabilities', 2, 1)
+ON DUPLICATE KEY UPDATE description=VALUES(description), type_id=VALUES(type_id), currency_id=VALUES(currency_id);
 
 INSERT INTO manufacturers (name, logo_file, sorting) VALUES
 ('Apple Inc.', 'apple_logo.png', 1),

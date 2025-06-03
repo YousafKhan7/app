@@ -49,13 +49,22 @@ class UserCreate(BaseModel):
     name: str
     email: str
 
+class AccountType(BaseModel):
+    id: int = None
+    name: str
+    description: str = None
+
+class AccountTypeCreate(BaseModel):
+    name: str
+    description: str = None
+
 class ChartOfAccount(BaseModel):
     id: int = None
     number: str
     description: str
     inactive: bool = False
     sub_account: str = None
-    type: str
+    type_id: int
     currency_id: int = None
 
 class ChartOfAccountCreate(BaseModel):
@@ -63,7 +72,7 @@ class ChartOfAccountCreate(BaseModel):
     description: str
     inactive: bool = False
     sub_account: str = None
-    type: str
+    type_id: int
     currency_id: int = None
 
 class Department(BaseModel):
@@ -254,8 +263,8 @@ async def create_chart_of_account(account: ChartOfAccountCreate):
             raise HTTPException(status_code=500, detail="Database connection failed")
 
         cursor = connection.cursor()
-        query = "INSERT INTO chart_of_accounts (number, description, inactive, sub_account, type, currency_id) VALUES (%s, %s, %s, %s, %s, %s)"
-        cursor.execute(query, (account.number, account.description, account.inactive, account.sub_account, account.type, account.currency_id))
+        query = "INSERT INTO chart_of_accounts (number, description, inactive, sub_account, type_id, currency_id) VALUES (%s, %s, %s, %s, %s, %s)"
+        cursor.execute(query, (account.number, account.description, account.inactive, account.sub_account, account.type_id, account.currency_id))
         connection.commit()
 
         account_id = cursor.lastrowid
@@ -274,8 +283,8 @@ async def update_chart_of_account(account_id: int, account: ChartOfAccountCreate
             raise HTTPException(status_code=500, detail="Database connection failed")
 
         cursor = connection.cursor()
-        query = "UPDATE chart_of_accounts SET number=%s, description=%s, inactive=%s, sub_account=%s, type=%s, currency_id=%s WHERE id=%s"
-        cursor.execute(query, (account.number, account.description, account.inactive, account.sub_account, account.type, account.currency_id, account_id))
+        query = "UPDATE chart_of_accounts SET number=%s, description=%s, inactive=%s, sub_account=%s, type_id=%s, currency_id=%s WHERE id=%s"
+        cursor.execute(query, (account.number, account.description, account.inactive, account.sub_account, account.type_id, account.currency_id, account_id))
         connection.commit()
 
         cursor.close()
@@ -300,6 +309,45 @@ async def delete_chart_of_account(account_id: int):
         connection.close()
 
         return {"message": "Account deleted successfully"}
+    except Error as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+# Account Types endpoints
+@app.get("/account-types")
+async def get_account_types():
+    try:
+        connection = get_db_connection()
+        if not connection:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM account_types ORDER BY name")
+        account_types = cursor.fetchall()
+
+        cursor.close()
+        connection.close()
+
+        return {"account_types": account_types}
+    except Error as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+@app.post("/account-types")
+async def create_account_type(account_type: AccountTypeCreate):
+    try:
+        connection = get_db_connection()
+        if not connection:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+
+        cursor = connection.cursor()
+        query = "INSERT INTO account_types (name, description) VALUES (%s, %s)"
+        cursor.execute(query, (account_type.name, account_type.description))
+        connection.commit()
+
+        account_type_id = cursor.lastrowid
+        cursor.close()
+        connection.close()
+
+        return {"message": "Account type created successfully", "account_type_id": account_type_id}
     except Error as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 

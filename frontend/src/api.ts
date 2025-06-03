@@ -22,13 +22,26 @@ export interface UserCreate {
   email: string;
 }
 
+export interface AccountType {
+  id: number;
+  name: string;
+  description?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface AccountTypeCreate {
+  name: string;
+  description?: string;
+}
+
 export interface ChartOfAccount {
   id: number;
   number: string;
   description: string;
   inactive: boolean;
   sub_account?: string;
-  type: string;
+  type_id: number;
   currency_id?: number;
   created_at?: string;
   updated_at?: string;
@@ -39,7 +52,7 @@ export interface ChartOfAccountCreate {
   description: string;
   inactive: boolean;
   sub_account?: string;
-  type: string;
+  type_id: number;
   currency_id?: number;
 }
 
@@ -165,6 +178,16 @@ export const apiService = {
   deleteUser: async (id: number): Promise<any> => {
     const response = await api.delete(`/users/${id}`);
     return response.data;
+  },
+
+  // Account Types
+  getAccountTypes: async (): Promise<AccountType[]> => {
+    const response = await api.get('/account-types');
+    return response.data.account_types;
+  },
+
+  createAccountType: async (accountType: AccountTypeCreate): Promise<void> => {
+    await api.post('/account-types', accountType);
   },
 
   // Chart of Accounts
