@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  Table, 
-  Button, 
-  Modal, 
-  Form, 
-  Input, 
+import {
+  Card,
+  Table,
+  Button,
+  Modal,
+  Form,
+  Input,
   InputNumber,
-  message, 
+  DatePicker,
+  message,
   Space,
   Typography,
   Popconfirm
@@ -15,6 +16,7 @@ import {
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { apiService } from '../../api';
 import type { Currency, CurrencyCreate } from '../../api';
+import dayjs from 'dayjs';
 
 const { Title } = Typography;
 
@@ -37,6 +39,13 @@ const Currencies: React.FC = () => {
       dataIndex: 'rate',
       key: 'rate',
       render: (rate: number) => rate.toFixed(4),
+    },
+    {
+      title: 'Effective Date',
+      dataIndex: 'effective_date',
+      key: 'effective_date',
+      width: 150,
+      render: (date: string) => dayjs(date).format('YYYY-MM-DD'),
     },
     {
       title: 'Actions',
@@ -92,7 +101,10 @@ const Currencies: React.FC = () => {
 
   const handleEdit = (record: Currency) => {
     setEditingRecord(record);
-    form.setFieldsValue(record);
+    form.setFieldsValue({
+      ...record,
+      effective_date: record.effective_date ? dayjs(record.effective_date) : null,
+    });
     setModalVisible(true);
   };
 
@@ -106,15 +118,20 @@ const Currencies: React.FC = () => {
     }
   };
 
-  const handleSubmit = async (values: CurrencyCreate) => {
+  const handleSubmit = async (values: any) => {
     try {
+      const submitData = {
+        ...values,
+        effective_date: values.effective_date ? values.effective_date.format('YYYY-MM-DD') : null,
+      };
+
       if (editingRecord) {
         // Update existing record
-        await apiService.updateCurrency(editingRecord.id, values);
+        await apiService.updateCurrency(editingRecord.id, submitData);
         message.success('Currency updated successfully');
       } else {
         // Add new record
-        await apiService.createCurrency(values);
+        await apiService.createCurrency(submitData);
         message.success('Currency added successfully');
       }
       setModalVisible(false);
@@ -177,12 +194,24 @@ const Currencies: React.FC = () => {
             label="Rate"
             rules={[{ required: true, message: 'Please enter exchange rate' }]}
           >
-            <InputNumber 
-              placeholder="Enter exchange rate" 
+            <InputNumber
+              placeholder="Enter exchange rate"
               min={0}
               step={0.0001}
               precision={4}
               style={{ width: '100%' }}
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="effective_date"
+            label="Effective Date"
+            rules={[{ required: true, message: 'Please select effective date' }]}
+          >
+            <DatePicker
+              placeholder="Select effective date"
+              style={{ width: '100%' }}
+              format="YYYY-MM-DD"
             />
           </Form.Item>
 

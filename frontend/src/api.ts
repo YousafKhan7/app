@@ -28,6 +28,8 @@ export interface ChartOfAccount {
   description: string;
   inactive: boolean;
   sub_account?: string;
+  type: string;
+  currency_id?: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -37,6 +39,8 @@ export interface ChartOfAccountCreate {
   description: string;
   inactive: boolean;
   sub_account?: string;
+  type: string;
+  currency_id?: number;
 }
 
 export interface Department {
@@ -56,6 +60,7 @@ export interface Currency {
   id: number;
   currency: string;
   rate: number;
+  effective_date: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -63,6 +68,7 @@ export interface Currency {
 export interface CurrencyCreate {
   currency: string;
   rate: number;
+  effective_date: string;
 }
 
 export interface Location {
@@ -125,6 +131,18 @@ export const apiService = {
   // Health check
   healthCheck: async () => {
     const response = await api.get('/health');
+    return response.data;
+  },
+
+  // File upload
+  uploadImage: async (file: File): Promise<{filename: string, url: string}> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/upload-image', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 

@@ -14,9 +14,10 @@ import {
   Popconfirm,
   Image
 } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, UploadOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, UploadOutlined, EyeOutlined } from '@ant-design/icons';
 import { apiService } from '../../api';
 import type { Manufacturer, ManufacturerCreate } from '../../api';
+import type { UploadFile } from 'antd/es/upload/interface';
 
 const { Title } = Typography;
 
@@ -26,6 +27,9 @@ const Manufacturers: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<Manufacturer | null>(null);
   const [form] = Form.useForm();
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const [previewImage, setPreviewImage] = useState('');
 
   const columns = [
     {
@@ -34,19 +38,29 @@ const Manufacturers: React.FC = () => {
       key: 'name',
     },
     {
-      title: 'File (Logo)',
+      title: 'Logo',
       dataIndex: 'logo_file',
       key: 'logo_file',
-      width: 150,
+      width: 120,
       render: (logo_file: string) => (
         logo_file ? (
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center">
-              <span className="text-blue-600 text-xs font-medium">IMG</span>
-            </div>
-            <span className="text-sm text-gray-600 truncate max-w-20" title={logo_file}>
-              {logo_file}
-            </span>
+            <Image
+              width={40}
+              height={40}
+              src={`http://localhost:8000/uploads/${logo_file}`}
+              fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik1RnG4W+FgYxN"
+              style={{ objectFit: 'cover', borderRadius: '4px' }}
+              preview={{
+                mask: <EyeOutlined />,
+                onVisibleChange: (visible) => {
+                  if (visible) {
+                    setPreviewImage(`http://localhost:8000/uploads/${logo_file}`);
+                    setPreviewVisible(true);
+                  }
+                }
+              }}
+            />
           </div>
         ) : (
           <span className="text-gray-400">No logo</span>
@@ -108,12 +122,24 @@ const Manufacturers: React.FC = () => {
   const handleAdd = () => {
     setEditingRecord(null);
     form.resetFields();
+    setFileList([]);
     setModalVisible(true);
   };
 
   const handleEdit = (record: Manufacturer) => {
     setEditingRecord(record);
     form.setFieldsValue(record);
+    // Set existing image in file list if available
+    if (record.logo_file) {
+      setFileList([{
+        uid: '-1',
+        name: record.logo_file,
+        status: 'done',
+        url: `http://localhost:8000/uploads/${record.logo_file}`,
+      }]);
+    } else {
+      setFileList([]);
+    }
     setModalVisible(true);
   };
 
@@ -129,39 +155,76 @@ const Manufacturers: React.FC = () => {
 
   const handleSubmit = async (values: ManufacturerCreate) => {
     try {
+      // Get the logo filename from the uploaded file
+      const logoFile = fileList.length > 0 && fileList[0].response ? fileList[0].response.filename :
+                      (fileList.length > 0 && fileList[0].name ? fileList[0].name : null);
+
+      const submitData = {
+        ...values,
+        logo_file: logoFile
+      };
+
       if (editingRecord) {
         // Update existing record
-        await apiService.updateManufacturer(editingRecord.id, values);
+        await apiService.updateManufacturer(editingRecord.id, submitData);
         message.success('Manufacturer updated successfully');
       } else {
         // Add new record
-        await apiService.createManufacturer(values);
+        await apiService.createManufacturer(submitData);
         message.success('Manufacturer added successfully');
       }
       setModalVisible(false);
       form.resetFields();
+      setFileList([]);
       fetchData(); // Refresh the data
     } catch (error) {
       message.error('Failed to save manufacturer');
     }
   };
 
+  const handleUpload = async (file: File) => {
+    try {
+      const response = await apiService.uploadImage(file);
+      return response;
+    } catch (error) {
+      message.error('Upload failed');
+      throw error;
+    }
+  };
+
   const uploadProps = {
     name: 'file',
-    action: '/api/upload', // TODO: Implement upload endpoint
-    headers: {
-      authorization: 'authorization-text',
-    },
-    onChange(info: any) {
-      if (info.file.status !== 'uploading') {
-        console.log(info.file, info.fileList);
+    listType: 'picture-card' as const,
+    fileList: fileList,
+    beforeUpload: (file: File) => {
+      const isImage = file.type.startsWith('image/');
+      if (!isImage) {
+        message.error('You can only upload image files!');
+        return false;
       }
-      if (info.file.status === 'done') {
-        message.success(`${info.file.name} file uploaded successfully`);
-      } else if (info.file.status === 'error') {
-        message.error(`${info.file.name} file upload failed.`);
+      const isLt2M = file.size / 1024 / 1024 < 2;
+      if (!isLt2M) {
+        message.error('Image must smaller than 2MB!');
+        return false;
+      }
+      return true;
+    },
+    customRequest: async ({ file, onSuccess, onError }: any) => {
+      try {
+        const response = await handleUpload(file as File);
+        onSuccess(response);
+      } catch (error) {
+        onError(error);
       }
     },
+    onChange: ({ fileList: newFileList }: any) => {
+      setFileList(newFileList);
+    },
+    onPreview: (file: UploadFile) => {
+      setPreviewImage(file.url || file.thumbUrl || '');
+      setPreviewVisible(true);
+    },
+    maxCount: 1,
   };
 
   return (
@@ -213,9 +276,16 @@ const Manufacturers: React.FC = () => {
 
           <Form.Item
             name="logo_file"
-            label="File (Logo)"
+            label="Logo Image"
           >
-            <Input placeholder="Enter logo filename (e.g., logo.png)" />
+            <Upload {...uploadProps}>
+              {fileList.length >= 1 ? null : (
+                <div>
+                  <PlusOutlined />
+                  <div style={{ marginTop: 8 }}>Upload</div>
+                </div>
+              )}
+            </Upload>
           </Form.Item>
 
           <Form.Item
@@ -241,6 +311,16 @@ const Manufacturers: React.FC = () => {
             </Space>
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Image Preview Modal */}
+      <Modal
+        open={previewVisible}
+        title="Image Preview"
+        footer={null}
+        onCancel={() => setPreviewVisible(false)}
+      >
+        <img alt="preview" style={{ width: '100%' }} src={previewImage} />
       </Modal>
     </div>
   );

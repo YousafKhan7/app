@@ -1,15 +1,25 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import mysql.connector
 from mysql.connector import Error
 import os
+import shutil
+from pathlib import Path
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 
 app = FastAPI(title="Full Stack App API", version="1.0.0")
+
+# Create uploads directory if it doesn't exist
+uploads_dir = Path("uploads")
+uploads_dir.mkdir(exist_ok=True)
+
+# Mount static files
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # Configure CORS
 app.add_middleware(
@@ -45,12 +55,16 @@ class ChartOfAccount(BaseModel):
     description: str
     inactive: bool = False
     sub_account: str = None
+    type: str
+    currency_id: int = None
 
 class ChartOfAccountCreate(BaseModel):
     number: str
     description: str
     inactive: bool = False
     sub_account: str = None
+    type: str
+    currency_id: int = None
 
 class Department(BaseModel):
     id: int = None
@@ -74,10 +88,12 @@ class Currency(BaseModel):
     id: int = None
     currency: str
     rate: float
+    effective_date: str
 
 class CurrencyCreate(BaseModel):
     currency: str
     rate: float
+    effective_date: str
 
 class Manufacturer(BaseModel):
     id: int = None
@@ -238,8 +254,8 @@ async def create_chart_of_account(account: ChartOfAccountCreate):
             raise HTTPException(status_code=500, detail="Database connection failed")
 
         cursor = connection.cursor()
-        query = "INSERT INTO chart_of_accounts (number, description, inactive, sub_account) VALUES (%s, %s, %s, %s)"
-        cursor.execute(query, (account.number, account.description, account.inactive, account.sub_account))
+        query = "INSERT INTO chart_of_accounts (number, description, inactive, sub_account, type, currency_id) VALUES (%s, %s, %s, %s, %s, %s)"
+        cursor.execute(query, (account.number, account.description, account.inactive, account.sub_account, account.type, account.currency_id))
         connection.commit()
 
         account_id = cursor.lastrowid
@@ -258,8 +274,8 @@ async def update_chart_of_account(account_id: int, account: ChartOfAccountCreate
             raise HTTPException(status_code=500, detail="Database connection failed")
 
         cursor = connection.cursor()
-        query = "UPDATE chart_of_accounts SET number=%s, description=%s, inactive=%s, sub_account=%s WHERE id=%s"
-        cursor.execute(query, (account.number, account.description, account.inactive, account.sub_account, account_id))
+        query = "UPDATE chart_of_accounts SET number=%s, description=%s, inactive=%s, sub_account=%s, type=%s, currency_id=%s WHERE id=%s"
+        cursor.execute(query, (account.number, account.description, account.inactive, account.sub_account, account.type, account.currency_id, account_id))
         connection.commit()
 
         cursor.close()
@@ -390,8 +406,8 @@ async def create_currency(currency: CurrencyCreate):
             raise HTTPException(status_code=500, detail="Database connection failed")
 
         cursor = connection.cursor()
-        query = "INSERT INTO currencies (currency, rate) VALUES (%s, %s)"
-        cursor.execute(query, (currency.currency, currency.rate))
+        query = "INSERT INTO currencies (currency, rate, effective_date) VALUES (%s, %s, %s)"
+        cursor.execute(query, (currency.currency, currency.rate, currency.effective_date))
         connection.commit()
 
         currency_id = cursor.lastrowid
@@ -410,8 +426,8 @@ async def update_currency(currency_id: int, currency: CurrencyCreate):
             raise HTTPException(status_code=500, detail="Database connection failed")
 
         cursor = connection.cursor()
-        query = "UPDATE currencies SET currency=%s, rate=%s WHERE id=%s"
-        cursor.execute(query, (currency.currency, currency.rate, currency_id))
+        query = "UPDATE currencies SET currency=%s, rate=%s, effective_date=%s WHERE id=%s"
+        cursor.execute(query, (currency.currency, currency.rate, currency.effective_date, currency_id))
         connection.commit()
 
         cursor.close()
@@ -742,6 +758,28 @@ async def delete_warehouse(warehouse_id: int):
         return {"message": "Warehouse deleted successfully"}
     except Error as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+# File upload endpoint
+@app.post("/upload-image")
+async def upload_image(file: UploadFile = File(...)):
+    try:
+        # Validate file type
+        if not file.content_type.startswith('image/'):
+            raise HTTPException(status_code=400, detail="File must be an image")
+
+        # Generate unique filename
+        import uuid
+        file_extension = file.filename.split('.')[-1]
+        unique_filename = f"{uuid.uuid4()}.{file_extension}"
+        file_path = uploads_dir / unique_filename
+
+        # Save file
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        return {"filename": unique_filename, "url": f"/uploads/{unique_filename}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"File upload failed: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

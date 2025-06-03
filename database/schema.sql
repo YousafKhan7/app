@@ -11,6 +11,16 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
+-- Currencies table (must be created before chart_of_accounts due to foreign key)
+CREATE TABLE IF NOT EXISTS currencies (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    currency VARCHAR(10) NOT NULL UNIQUE,
+    rate DECIMAL(10, 4) NOT NULL DEFAULT 1.0000,
+    effective_date DATE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
 -- Chart of Accounts table
 CREATE TABLE IF NOT EXISTS chart_of_accounts (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -18,8 +28,11 @@ CREATE TABLE IF NOT EXISTS chart_of_accounts (
     description VARCHAR(255) NOT NULL,
     inactive BOOLEAN DEFAULT FALSE,
     sub_account VARCHAR(100),
+    type VARCHAR(50) NOT NULL,
+    currency_id INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (currency_id) REFERENCES currencies(id) ON DELETE SET NULL
 );
 
 -- Departments table
@@ -36,15 +49,6 @@ CREATE TABLE IF NOT EXISTS locations (
     id INT AUTO_INCREMENT PRIMARY KEY,
     number VARCHAR(20) NOT NULL UNIQUE,
     name VARCHAR(100) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-
--- Currencies table
-CREATE TABLE IF NOT EXISTS currencies (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    currency VARCHAR(10) NOT NULL UNIQUE,
-    rate DECIMAL(10, 4) NOT NULL DEFAULT 1.0000,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -85,11 +89,11 @@ INSERT INTO users (name, email) VALUES
 ('Bob Johnson', 'bob@example.com')
 ON DUPLICATE KEY UPDATE name=VALUES(name);
 
-INSERT INTO currencies (currency, rate) VALUES
-('CAD', 1.0000),
-('USD', 1.3500),
-('EUR', 1.5000)
-ON DUPLICATE KEY UPDATE rate=VALUES(rate);
+INSERT INTO currencies (currency, rate, effective_date) VALUES
+('CAD', 1.0000, '2024-01-01'),
+('USD', 1.3500, '2024-01-01'),
+('EUR', 1.5000, '2024-01-01')
+ON DUPLICATE KEY UPDATE rate=VALUES(rate), effective_date=VALUES(effective_date);
 
 INSERT INTO departments (number, name) VALUES
 ('001', 'Sales'),
@@ -103,11 +107,11 @@ INSERT INTO locations (number, name) VALUES
 ('LOC003', 'Branch Office')
 ON DUPLICATE KEY UPDATE name=VALUES(name);
 
-INSERT INTO chart_of_accounts (number, description, inactive, sub_account) VALUES
-('1000', 'Cash', FALSE, 'Assets'),
-('1100', 'Accounts Receivable', FALSE, 'Assets'),
-('2000', 'Accounts Payable', FALSE, 'Liabilities')
-ON DUPLICATE KEY UPDATE description=VALUES(description);
+INSERT INTO chart_of_accounts (number, description, inactive, sub_account, type, currency_id) VALUES
+('1000', 'Cash', FALSE, 'Assets', 'Asset', 1),
+('1100', 'Accounts Receivable', FALSE, 'Assets', 'Asset', 1),
+('2000', 'Accounts Payable', FALSE, 'Liabilities', 'Liability', 1)
+ON DUPLICATE KEY UPDATE description=VALUES(description), type=VALUES(type), currency_id=VALUES(currency_id);
 
 INSERT INTO manufacturers (name, logo_file, sorting) VALUES
 ('Apple Inc.', 'apple_logo.png', 1),

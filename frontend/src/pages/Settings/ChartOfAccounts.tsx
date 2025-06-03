@@ -1,25 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  Table, 
-  Button, 
-  Modal, 
-  Form, 
-  Input, 
-  Switch, 
-  message, 
+import {
+  Card,
+  Table,
+  Button,
+  Modal,
+  Form,
+  Input,
+  Switch,
+  message,
   Space,
   Typography,
-  Popconfirm
+  Popconfirm,
+  Select
 } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { apiService } from '../../api';
-import type { ChartOfAccount, ChartOfAccountCreate } from '../../api';
+import type { ChartOfAccount, ChartOfAccountCreate, Currency } from '../../api';
 
 const { Title } = Typography;
 
 const ChartOfAccounts: React.FC = () => {
   const [data, setData] = useState<ChartOfAccount[]>([]);
+  const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<ChartOfAccount | null>(null);
@@ -36,6 +38,22 @@ const ChartOfAccounts: React.FC = () => {
       title: 'Description',
       dataIndex: 'description',
       key: 'description',
+    },
+    {
+      title: 'Type',
+      dataIndex: 'type',
+      key: 'type',
+      width: 120,
+    },
+    {
+      title: 'Currency',
+      dataIndex: 'currency_id',
+      key: 'currency_id',
+      width: 120,
+      render: (currency_id: number) => {
+        const currency = currencies.find(c => c.id === currency_id);
+        return currency ? currency.currency : '-';
+      },
     },
     {
       title: 'Inactive',
@@ -94,8 +112,18 @@ const ChartOfAccounts: React.FC = () => {
     }
   };
 
+  const fetchCurrencies = async () => {
+    try {
+      const currenciesData = await apiService.getCurrencies();
+      setCurrencies(currenciesData);
+    } catch (error) {
+      message.error('Failed to fetch currencies');
+    }
+  };
+
   useEffect(() => {
     fetchData();
+    fetchCurrencies();
   }, []);
 
   const handleAdd = () => {
@@ -192,6 +220,33 @@ const ChartOfAccounts: React.FC = () => {
             rules={[{ required: true, message: 'Please enter description' }]}
           >
             <Input placeholder="Enter description" />
+          </Form.Item>
+
+          <Form.Item
+            name="type"
+            label="Type"
+            rules={[{ required: true, message: 'Please select account type' }]}
+          >
+            <Select placeholder="Select account type">
+              <Select.Option value="Asset">Asset</Select.Option>
+              <Select.Option value="Liability">Liability</Select.Option>
+              <Select.Option value="Equity">Equity</Select.Option>
+              <Select.Option value="Revenue">Revenue</Select.Option>
+              <Select.Option value="Expense">Expense</Select.Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            name="currency_id"
+            label="Currency"
+          >
+            <Select placeholder="Select currency" allowClear>
+              {currencies.map(currency => (
+                <Select.Option key={currency.id} value={currency.id}>
+                  {currency.currency}
+                </Select.Option>
+              ))}
+            </Select>
           </Form.Item>
 
           <Form.Item
