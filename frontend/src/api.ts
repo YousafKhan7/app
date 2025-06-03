@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8000';
+// Determine API base URL based on environment
+const API_BASE_URL = import.meta.env.PROD
+  ? '/api'  // Production: use relative path for Vercel
+  : 'http://localhost:8000';  // Development: use localhost
 
 const api = axios.create({
   baseURL: API_BASE_URL,
