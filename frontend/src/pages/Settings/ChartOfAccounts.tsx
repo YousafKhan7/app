@@ -166,12 +166,14 @@ const ChartOfAccounts: React.FC = () => {
   const handleAdd = () => {
     setEditingRecord(null);
     form.resetFields();
+    clearError(); // Clear any previous error messages
     setModalVisible(true);
   };
 
   const handleEdit = (record: ChartOfAccount) => {
     setEditingRecord(record);
     form.setFieldsValue(record);
+    clearError(); // Clear any previous error messages
     setModalVisible(true);
   };
 
@@ -191,11 +193,11 @@ const ChartOfAccounts: React.FC = () => {
       if (editingRecord) {
         // Update existing record
         await apiService.updateChartOfAccount(editingRecord.id, values);
-        message.success('Account updated successfully');
+        console.log('Account updated successfully');
       } else {
         // Add new record
         await apiService.createChartOfAccount(values);
-        message.success('Account added successfully');
+        console.log('Account added successfully');
       }
       setModalVisible(false);
       form.resetFields();

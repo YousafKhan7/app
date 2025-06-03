@@ -7,12 +7,8 @@ export const useErrorHandler = () => {
     // Convert technical database errors to user-friendly messages
     let userFriendlyMessage = message;
     
-    if (message.includes('Duplicate entry') && message.includes('number')) {
-      userFriendlyMessage = 'This number already exists. Please use a different number.';
-    } else if (message.includes('Duplicate entry') && message.includes('name')) {
-      userFriendlyMessage = 'This name already exists. Please use a different name.';
-    } else if (message.includes('Duplicate entry')) {
-      userFriendlyMessage = 'This record already exists. Please check your input.';
+    if (message.includes('Duplicate entry')) {
+      userFriendlyMessage = 'Duplicate value detected. Please use a different value.';
     } else if (message.includes('foreign key constraint')) {
       userFriendlyMessage = 'Cannot delete this record because it is being used elsewhere.';
     } else if (message.includes('Data too long')) {

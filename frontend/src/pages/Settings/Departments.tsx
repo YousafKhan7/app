@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  Table, 
-  Button, 
-  Modal, 
-  Form, 
-  Input, 
-  message, 
+import {
+  Card,
+  Table,
+  Button,
+  Modal,
+  Form,
+  Input,
   Space,
   Typography,
   Popconfirm
@@ -14,6 +13,8 @@ import {
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { apiService } from '../../api';
 import type { Department, DepartmentCreate } from '../../api';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
+import ErrorToast from '../../components/ErrorDisplay/ErrorToast';
 
 const { Title } = Typography;
 
@@ -23,6 +24,9 @@ const Departments: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<Department | null>(null);
   const [form] = Form.useForm();
+
+  // Use our custom error handler hook
+  const { errorMessage, showError, clearError } = useErrorHandler();
 
   const columns = [
     {
@@ -72,7 +76,7 @@ const Departments: React.FC = () => {
       const departments = await apiService.getDepartments();
       setData(departments);
     } catch (error: any) {
-      message.error(error.message || 'Failed to fetch departments');
+      showError(error.message || 'Failed to fetch departments');
     } finally {
       setLoading(false);
     }
@@ -85,22 +89,24 @@ const Departments: React.FC = () => {
   const handleAdd = () => {
     setEditingRecord(null);
     form.resetFields();
+    clearError(); // Clear any previous error messages
     setModalVisible(true);
   };
 
   const handleEdit = (record: Department) => {
     setEditingRecord(record);
     form.setFieldsValue(record);
+    clearError(); // Clear any previous error messages
     setModalVisible(true);
   };
 
   const handleDelete = async (id: number) => {
     try {
       await apiService.deleteDepartment(id);
-      message.success('Department deleted successfully');
+      console.log('Department deleted successfully');
       fetchData(); // Refresh the data
     } catch (error: any) {
-      message.error(error.message || 'Failed to delete department');
+      showError(error.message || 'Failed to delete department');
     }
   };
 
@@ -109,17 +115,17 @@ const Departments: React.FC = () => {
       if (editingRecord) {
         // Update existing record
         await apiService.updateDepartment(editingRecord.id, values);
-        message.success('Department updated successfully');
+        console.log('Department updated successfully');
       } else {
         // Add new record
         await apiService.createDepartment(values);
-        message.success('Department added successfully');
+        console.log('Department added successfully');
       }
       setModalVisible(false);
       form.resetFields();
       fetchData(); // Refresh the data
     } catch (error: any) {
-      message.error(error.message || 'Failed to save department');
+      showError(error.message || 'Failed to save department');
     }
   };
 
@@ -162,6 +168,9 @@ const Departments: React.FC = () => {
           layout="vertical"
           onFinish={handleSubmit}
         >
+          {/* Error Display at the top of the form */}
+          <ErrorToast message={errorMessage} onClose={clearError} />
+
           <Form.Item
             name="number"
             label="Number"
