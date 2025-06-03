@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  Table, 
-  Button, 
-  Modal, 
-  Form, 
-  Input, 
-  message, 
+import {
+  Card,
+  Table,
+  Button,
+  Modal,
+  Form,
+  Input,
   Space,
   Typography,
   Popconfirm
@@ -14,6 +13,8 @@ import {
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { apiService } from '../../api';
 import type { Location, LocationCreate } from '../../api';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
+import ErrorToast from '../../components/ErrorDisplay/ErrorToast';
 
 const { Title } = Typography;
 
@@ -23,6 +24,9 @@ const Locations: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<Location | null>(null);
   const [form] = Form.useForm();
+
+  // Use our custom error handler hook
+  const { errorMessage, showError, clearError } = useErrorHandler();
 
   const columns = [
     {
@@ -72,7 +76,7 @@ const Locations: React.FC = () => {
       const locations = await apiService.getLocations();
       setData(locations);
     } catch (error: any) {
-      message.error(error.message || 'Failed to fetch locations');
+      showError(error.message || 'Failed to fetch locations');
     } finally {
       setLoading(false);
     }
@@ -85,22 +89,24 @@ const Locations: React.FC = () => {
   const handleAdd = () => {
     setEditingRecord(null);
     form.resetFields();
+    clearError(); // Clear any previous error messages
     setModalVisible(true);
   };
 
   const handleEdit = (record: Location) => {
     setEditingRecord(record);
     form.setFieldsValue(record);
+    clearError(); // Clear any previous error messages
     setModalVisible(true);
   };
 
   const handleDelete = async (id: number) => {
     try {
       await apiService.deleteLocation(id);
-      message.success('Location deleted successfully');
+      console.log('Location deleted successfully');
       fetchData(); // Refresh the data
     } catch (error: any) {
-      message.error(error.message || 'Failed to delete location');
+      showError(error.message || 'Failed to delete location');
     }
   };
 
@@ -109,17 +115,17 @@ const Locations: React.FC = () => {
       if (editingRecord) {
         // Update existing record
         await apiService.updateLocation(editingRecord.id, values);
-        message.success('Location updated successfully');
+        console.log('Location updated successfully');
       } else {
         // Add new record
         await apiService.createLocation(values);
-        message.success('Location added successfully');
+        console.log('Location added successfully');
       }
       setModalVisible(false);
       form.resetFields();
       fetchData(); // Refresh the data
     } catch (error: any) {
-      message.error(error.message || 'Failed to save location');
+      showError(error.message || 'Failed to save location');
     }
   };
 
@@ -162,6 +168,9 @@ const Locations: React.FC = () => {
           layout="vertical"
           onFinish={handleSubmit}
         >
+          {/* Error Display at the top of the form */}
+          <ErrorToast message={errorMessage} onClose={clearError} />
+
           <Form.Item
             name="number"
             label="Number"

@@ -8,7 +8,6 @@ import {
   Input,
   InputNumber,
   DatePicker,
-  message,
   Space,
   Typography,
   Popconfirm
@@ -17,6 +16,8 @@ import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { apiService } from '../../api';
 import type { Currency, CurrencyCreate } from '../../api';
 import dayjs from 'dayjs';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
+import ErrorToast from '../../components/ErrorDisplay/ErrorToast';
 
 const { Title } = Typography;
 
@@ -26,6 +27,9 @@ const Currencies: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<Currency | null>(null);
   const [form] = Form.useForm();
+
+  // Use our custom error handler hook
+  const { errorMessage, showError, clearError } = useErrorHandler();
 
   const columns = [
     {
@@ -83,7 +87,7 @@ const Currencies: React.FC = () => {
       const currencies = await apiService.getCurrencies();
       setData(currencies);
     } catch (error: any) {
-      message.error(error.message || 'Failed to fetch currencies');
+      showError(error.message || 'Failed to fetch currencies');
     } finally {
       setLoading(false);
     }
@@ -96,6 +100,7 @@ const Currencies: React.FC = () => {
   const handleAdd = () => {
     setEditingRecord(null);
     form.resetFields();
+    clearError(); // Clear any previous error messages
     setModalVisible(true);
   };
 
@@ -105,16 +110,17 @@ const Currencies: React.FC = () => {
       ...record,
       effective_date: record.effective_date ? dayjs(record.effective_date) : null,
     });
+    clearError(); // Clear any previous error messages
     setModalVisible(true);
   };
 
   const handleDelete = async (id: number) => {
     try {
       await apiService.deleteCurrency(id);
-      message.success('Currency deleted successfully');
+      console.log('Currency deleted successfully');
       fetchData(); // Refresh the data
     } catch (error: any) {
-      message.error(error.message || 'Failed to delete currency');
+      showError(error.message || 'Failed to delete currency');
     }
   };
 
@@ -128,17 +134,17 @@ const Currencies: React.FC = () => {
       if (editingRecord) {
         // Update existing record
         await apiService.updateCurrency(editingRecord.id, submitData);
-        message.success('Currency updated successfully');
+        console.log('Currency updated successfully');
       } else {
         // Add new record
         await apiService.createCurrency(submitData);
-        message.success('Currency added successfully');
+        console.log('Currency added successfully');
       }
       setModalVisible(false);
       form.resetFields();
       fetchData(); // Refresh the data
     } catch (error: any) {
-      message.error(error.message || 'Failed to save currency');
+      showError(error.message || 'Failed to save currency');
     }
   };
 
@@ -181,6 +187,9 @@ const Currencies: React.FC = () => {
           layout="vertical"
           onFinish={handleSubmit}
         >
+          {/* Error Display at the top of the form */}
+          <ErrorToast message={errorMessage} onClose={clearError} />
+
           <Form.Item
             name="currency"
             label="Currency"
