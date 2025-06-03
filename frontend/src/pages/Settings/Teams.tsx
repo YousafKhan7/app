@@ -44,7 +44,7 @@ const Teams: React.FC = () => {
       title: 'Actions',
       key: 'actions',
       width: 120,
-      render: (_, record: Team) => (
+      render: (_: any, record: Team) => (
         <Space>
           <Button
             type="text"

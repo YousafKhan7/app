@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Typography, Space, Input, Table, Row, Col, Statistic } from 'antd';
-import { SearchOutlined, UserOutlined, TeamOutlined, ShopOutlined, BankOutlined } from '@ant-design/icons';
+import { SearchOutlined, UserOutlined, TeamOutlined, BankOutlined } from '@ant-design/icons';
 import { apiService } from '../api';
 import type { User } from '../api';
 import { useErrorHandler } from '../hooks/useErrorHandler';
@@ -74,8 +74,8 @@ const Dashboard: React.FC = () => {
       title: 'Created At',
       dataIndex: 'created_at',
       key: 'created_at',
-      render: (date: string) => new Date(date).toLocaleDateString(),
-      sorter: (a: User, b: User) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+      render: (date: string) => new Date(date || '').toLocaleDateString(),
+      sorter: (a: User, b: User) => new Date(a.created_at || '').getTime() - new Date(b.created_at || '').getTime(),
     },
   ];
 

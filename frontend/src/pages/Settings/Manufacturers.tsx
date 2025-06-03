@@ -13,7 +13,7 @@ import {
   Popconfirm,
   Image
 } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, UploadOutlined, EyeOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import { apiService } from '../../api';
 import type { Manufacturer, ManufacturerCreate } from '../../api';
 import type { UploadFile } from 'antd/es/upload/interface';
@@ -75,7 +75,7 @@ const Manufacturers: React.FC = () => {
       title: 'Actions',
       key: 'actions',
       width: 120,
-      render: (_, record: Manufacturer) => (
+      render: (_: any, record: Manufacturer) => (
         <Space>
           <Button
             type="text"

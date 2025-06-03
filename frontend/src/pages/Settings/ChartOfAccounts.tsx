@@ -14,7 +14,7 @@ import {
 } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { apiService } from '../../api';
-import type { ChartOfAccount, ChartOfAccountCreate, Currency, AccountType, AccountTypeCreate } from '../../api';
+import type { ChartOfAccount, ChartOfAccountCreate, Currency, AccountType } from '../../api';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
 import ErrorToast from '../../components/ErrorDisplay/ErrorToast';
 
@@ -84,7 +84,7 @@ const ChartOfAccounts: React.FC = () => {
       title: 'Actions',
       key: 'actions',
       width: 120,
-      render: (_, record: ChartOfAccount) => (
+      render: (_: any, record: ChartOfAccount) => (
         <Space>
           <Button
             type="text"
