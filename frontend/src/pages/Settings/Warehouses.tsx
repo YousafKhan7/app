@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  Table, 
-  Button, 
-  Modal, 
-  Form, 
-  Input, 
+import {
+  Card,
+  Table,
+  Button,
+  Modal,
+  Form,
+  Input,
   InputNumber,
-  message, 
   Space,
   Typography,
   Popconfirm
@@ -15,6 +14,8 @@ import {
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { apiService } from '../../api';
 import type { Warehouse, WarehouseCreate } from '../../api';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
+import ErrorToast from '../../components/ErrorDisplay/ErrorToast';
 
 const { Title } = Typography;
 
@@ -24,6 +25,9 @@ const Warehouses: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<Warehouse | null>(null);
   const [form] = Form.useForm();
+
+  // Use our custom error handler hook
+  const { errorMessage, showError, clearError } = useErrorHandler();
 
   const columns = [
     {
@@ -80,7 +84,7 @@ const Warehouses: React.FC = () => {
       const warehouses = await apiService.getWarehouses();
       setData(warehouses);
     } catch (error: any) {
-      message.error(error.message || 'Failed to fetch warehouses');
+      showError(error.message || 'Failed to fetch warehouses');
     } finally {
       setLoading(false);
     }
@@ -93,22 +97,24 @@ const Warehouses: React.FC = () => {
   const handleAdd = () => {
     setEditingRecord(null);
     form.resetFields();
+    clearError(); // Clear any previous error messages
     setModalVisible(true);
   };
 
   const handleEdit = (record: Warehouse) => {
     setEditingRecord(record);
     form.setFieldsValue(record);
+    clearError(); // Clear any previous error messages
     setModalVisible(true);
   };
 
   const handleDelete = async (id: number) => {
     try {
       await apiService.deleteWarehouse(id);
-      message.success('Warehouse deleted successfully');
+      console.log('Warehouse deleted successfully');
       fetchData(); // Refresh the data
     } catch (error: any) {
-      message.error(error.message || 'Failed to delete warehouse');
+      showError(error.message || 'Failed to delete warehouse');
     }
   };
 
@@ -117,17 +123,17 @@ const Warehouses: React.FC = () => {
       if (editingRecord) {
         // Update existing record
         await apiService.updateWarehouse(editingRecord.id, values);
-        message.success('Warehouse updated successfully');
+        console.log('Warehouse updated successfully');
       } else {
         // Add new record
         await apiService.createWarehouse(values);
-        message.success('Warehouse added successfully');
+        console.log('Warehouse added successfully');
       }
       setModalVisible(false);
       form.resetFields();
       fetchData(); // Refresh the data
     } catch (error: any) {
-      message.error(error.message || 'Failed to save warehouse');
+      showError(error.message || 'Failed to save warehouse');
     }
   };
 
@@ -170,6 +176,9 @@ const Warehouses: React.FC = () => {
           layout="vertical"
           onFinish={handleSubmit}
         >
+          {/* Error Display at the top of the form */}
+          <ErrorToast message={errorMessage} onClose={clearError} />
+
           <Form.Item
             name="warehouse_name"
             label="Warehouse Name"

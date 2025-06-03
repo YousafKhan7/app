@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  Table, 
-  Button, 
-  Modal, 
-  Form, 
-  Input, 
-  message, 
+import {
+  Card,
+  Table,
+  Button,
+  Modal,
+  Form,
+  Input,
   Space,
   Typography,
   Popconfirm
@@ -14,6 +13,8 @@ import {
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { apiService } from '../../api';
 import type { Team, TeamCreate } from '../../api';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
+import ErrorToast from '../../components/ErrorDisplay/ErrorToast';
 
 const { Title } = Typography;
 const { TextArea } = Input;
@@ -24,6 +25,9 @@ const Teams: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<Team | null>(null);
   const [form] = Form.useForm();
+
+  // Use our custom error handler hook
+  const { errorMessage, showError, clearError } = useErrorHandler();
 
   const columns = [
     {
@@ -72,7 +76,7 @@ const Teams: React.FC = () => {
       const teams = await apiService.getTeams();
       setData(teams);
     } catch (error: any) {
-      message.error(error.message || 'Failed to fetch teams');
+      showError(error.message || 'Failed to fetch teams');
     } finally {
       setLoading(false);
     }
@@ -85,22 +89,24 @@ const Teams: React.FC = () => {
   const handleAdd = () => {
     setEditingRecord(null);
     form.resetFields();
+    clearError(); // Clear any previous error messages
     setModalVisible(true);
   };
 
   const handleEdit = (record: Team) => {
     setEditingRecord(record);
     form.setFieldsValue(record);
+    clearError(); // Clear any previous error messages
     setModalVisible(true);
   };
 
   const handleDelete = async (id: number) => {
     try {
       await apiService.deleteTeam(id);
-      message.success('Team deleted successfully');
+      console.log('Team deleted successfully');
       fetchData(); // Refresh the data
     } catch (error: any) {
-      message.error(error.message || 'Failed to delete team');
+      showError(error.message || 'Failed to delete team');
     }
   };
 
@@ -109,17 +115,17 @@ const Teams: React.FC = () => {
       if (editingRecord) {
         // Update existing record
         await apiService.updateTeam(editingRecord.id, values);
-        message.success('Team updated successfully');
+        console.log('Team updated successfully');
       } else {
         // Add new record
         await apiService.createTeam(values);
-        message.success('Team added successfully');
+        console.log('Team added successfully');
       }
       setModalVisible(false);
       form.resetFields();
       fetchData(); // Refresh the data
     } catch (error: any) {
-      message.error(error.message || 'Failed to save team');
+      showError(error.message || 'Failed to save team');
     }
   };
 
@@ -162,6 +168,9 @@ const Teams: React.FC = () => {
           layout="vertical"
           onFinish={handleSubmit}
         >
+          {/* Error Display at the top of the form */}
+          <ErrorToast message={errorMessage} onClose={clearError} />
+
           <Form.Item
             name="name"
             label="Name"

@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  Table, 
-  Button, 
-  Modal, 
-  Form, 
-  Input, 
+import {
+  Card,
+  Table,
+  Button,
+  Modal,
+  Form,
+  Input,
   InputNumber,
   Upload,
-  message, 
   Space,
   Typography,
   Popconfirm,
@@ -18,6 +17,8 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, UploadOutlined, EyeOutlined
 import { apiService } from '../../api';
 import type { Manufacturer, ManufacturerCreate } from '../../api';
 import type { UploadFile } from 'antd/es/upload/interface';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
+import ErrorToast from '../../components/ErrorDisplay/ErrorToast';
 
 const { Title } = Typography;
 
@@ -28,8 +29,9 @@ const Manufacturers: React.FC = () => {
   const [editingRecord, setEditingRecord] = useState<Manufacturer | null>(null);
   const [form] = Form.useForm();
   const [fileList, setFileList] = useState<UploadFile[]>([]);
-  const [previewVisible, setPreviewVisible] = useState(false);
-  const [previewImage, setPreviewImage] = useState('');
+
+  // Use our custom error handler hook
+  const { errorMessage, showError, clearError } = useErrorHandler();
 
   const columns = [
     {
@@ -44,26 +46,22 @@ const Manufacturers: React.FC = () => {
       width: 120,
       render: (logo_file: string) => (
         logo_file ? (
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center justify-center">
             <Image
               width={40}
               height={40}
               src={`http://localhost:8000/uploads/${logo_file}`}
-              fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik1RnG4W+FgYxN"
               style={{ objectFit: 'cover', borderRadius: '4px' }}
               preview={{
                 mask: <EyeOutlined />,
-                onVisibleChange: (visible) => {
-                  if (visible) {
-                    setPreviewImage(`http://localhost:8000/uploads/${logo_file}`);
-                    setPreviewVisible(true);
-                  }
-                }
               }}
+              fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik1RnG4W+FgYxN"
             />
           </div>
         ) : (
-          <span className="text-gray-400">No logo</span>
+          <div className="flex items-center justify-center">
+            <span className="text-gray-400 text-xs">No logo</span>
+          </div>
         )
       ),
     },
@@ -109,7 +107,7 @@ const Manufacturers: React.FC = () => {
       const manufacturers = await apiService.getManufacturers();
       setData(manufacturers);
     } catch (error: any) {
-      message.error(error.message || 'Failed to fetch manufacturers');
+      showError(error.message || 'Failed to fetch manufacturers');
     } finally {
       setLoading(false);
     }
@@ -123,6 +121,7 @@ const Manufacturers: React.FC = () => {
     setEditingRecord(null);
     form.resetFields();
     setFileList([]);
+    clearError(); // Clear any previous error messages
     setModalVisible(true);
   };
 
@@ -140,16 +139,17 @@ const Manufacturers: React.FC = () => {
     } else {
       setFileList([]);
     }
+    clearError(); // Clear any previous error messages
     setModalVisible(true);
   };
 
   const handleDelete = async (id: number) => {
     try {
       await apiService.deleteManufacturer(id);
-      message.success('Manufacturer deleted successfully');
+      console.log('Manufacturer deleted successfully');
       fetchData(); // Refresh the data
     } catch (error: any) {
-      message.error(error.message || 'Failed to delete manufacturer');
+      showError(error.message || 'Failed to delete manufacturer');
     }
   };
 
@@ -157,28 +157,28 @@ const Manufacturers: React.FC = () => {
     try {
       // Get the logo filename from the uploaded file
       const logoFile = fileList.length > 0 && fileList[0].response ? fileList[0].response.filename :
-                      (fileList.length > 0 && fileList[0].name ? fileList[0].name : null);
+                      (fileList.length > 0 && fileList[0].name ? fileList[0].name : undefined);
 
       const submitData = {
         ...values,
-        logo_file: logoFile
+        logo_file: logoFile || undefined  // Send undefined instead of null
       };
 
       if (editingRecord) {
         // Update existing record
         await apiService.updateManufacturer(editingRecord.id, submitData);
-        message.success('Manufacturer updated successfully');
+        console.log('Manufacturer updated successfully');
       } else {
         // Add new record
         await apiService.createManufacturer(submitData);
-        message.success('Manufacturer added successfully');
+        console.log('Manufacturer added successfully');
       }
       setModalVisible(false);
       form.resetFields();
       setFileList([]);
       fetchData(); // Refresh the data
     } catch (error: any) {
-      message.error(error.message || 'Failed to save manufacturer');
+      showError(error.message || 'Failed to save manufacturer');
     }
   };
 
@@ -187,7 +187,7 @@ const Manufacturers: React.FC = () => {
       const response = await apiService.uploadImage(file);
       return response;
     } catch (error: any) {
-      message.error(error.message || 'Upload failed');
+      showError(error.message || 'Upload failed');
       throw error;
     }
   };
@@ -199,12 +199,12 @@ const Manufacturers: React.FC = () => {
     beforeUpload: (file: File) => {
       const isImage = file.type.startsWith('image/');
       if (!isImage) {
-        message.error('You can only upload image files!');
+        showError('You can only upload image files!');
         return false;
       }
       const isLt2M = file.size / 1024 / 1024 < 2;
       if (!isLt2M) {
-        message.error('Image must smaller than 2MB!');
+        showError('Image must smaller than 2MB!');
         return false;
       }
       return true;
@@ -219,10 +219,6 @@ const Manufacturers: React.FC = () => {
     },
     onChange: ({ fileList: newFileList }: any) => {
       setFileList(newFileList);
-    },
-    onPreview: (file: UploadFile) => {
-      setPreviewImage(file.url || file.thumbUrl || '');
-      setPreviewVisible(true);
     },
     maxCount: 1,
   };
@@ -266,6 +262,9 @@ const Manufacturers: React.FC = () => {
           layout="vertical"
           onFinish={handleSubmit}
         >
+          {/* Error Display at the top of the form */}
+          <ErrorToast message={errorMessage} onClose={clearError} />
+
           <Form.Item
             name="name"
             label="Name"
@@ -311,16 +310,6 @@ const Manufacturers: React.FC = () => {
             </Space>
           </Form.Item>
         </Form>
-      </Modal>
-
-      {/* Image Preview Modal */}
-      <Modal
-        open={previewVisible}
-        title="Image Preview"
-        footer={null}
-        onCancel={() => setPreviewVisible(false)}
-      >
-        <img alt="preview" style={{ width: '100%' }} src={previewImage} />
       </Modal>
     </div>
   );

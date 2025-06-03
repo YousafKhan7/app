@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  Table, 
-  Button, 
-  Modal, 
-  Form, 
-  Input, 
-  message, 
+import {
+  Card,
+  Table,
+  Button,
+  Modal,
+  Form,
+  Input,
   Space,
   Typography,
   Popconfirm
@@ -14,6 +13,8 @@ import {
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { apiService } from '../../api';
 import type { User, UserCreate } from '../../api';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
+import ErrorToast from '../../components/ErrorDisplay/ErrorToast';
 
 const { Title } = Typography;
 
@@ -23,6 +24,9 @@ const Users: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<User | null>(null);
   const [form] = Form.useForm();
+
+  // Use our custom error handler hook
+  const { errorMessage, showError, clearError } = useErrorHandler();
 
   const columns = [
     {
@@ -83,7 +87,7 @@ const Users: React.FC = () => {
       const usersData = await apiService.getUsers();
       setData(usersData);
     } catch (error: any) {
-      message.error(error.message || 'Failed to fetch users');
+      showError(error.message || 'Failed to fetch users');
     } finally {
       setLoading(false);
     }
@@ -96,22 +100,24 @@ const Users: React.FC = () => {
   const handleAdd = () => {
     setEditingRecord(null);
     form.resetFields();
+    clearError(); // Clear any previous error messages
     setModalVisible(true);
   };
 
   const handleEdit = (record: User) => {
     setEditingRecord(record);
     form.setFieldsValue(record);
+    clearError(); // Clear any previous error messages
     setModalVisible(true);
   };
 
   const handleDelete = async (id: number) => {
     try {
       await apiService.deleteUser(id);
-      message.success('User deleted successfully');
+      console.log('User deleted successfully');
       fetchData(); // Refresh the data
     } catch (error: any) {
-      message.error(error.message || 'Failed to delete user');
+      showError(error.message || 'Failed to delete user');
     }
   };
 
@@ -120,17 +126,17 @@ const Users: React.FC = () => {
       if (editingRecord) {
         // Update existing user
         await apiService.updateUser(editingRecord.id, values);
-        message.success('User updated successfully');
+        console.log('User updated successfully');
       } else {
         // Add new user
         await apiService.createUser(values);
-        message.success('User added successfully');
+        console.log('User added successfully');
       }
       setModalVisible(false);
       form.resetFields();
       fetchData(); // Refresh the data
     } catch (error: any) {
-      message.error(error.message || 'Failed to save user');
+      showError(error.message || 'Failed to save user');
     }
   };
 
@@ -173,6 +179,9 @@ const Users: React.FC = () => {
           layout="vertical"
           onFinish={handleSubmit}
         >
+          {/* Error Display at the top of the form */}
+          <ErrorToast message={errorMessage} onClose={clearError} />
+
           <Form.Item
             name="name"
             label="Name"
