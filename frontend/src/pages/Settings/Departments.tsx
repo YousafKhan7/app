@@ -71,8 +71,8 @@ const Departments: React.FC = () => {
     try {
       const departments = await apiService.getDepartments();
       setData(departments);
-    } catch (error) {
-      message.error('Failed to fetch departments');
+    } catch (error: any) {
+      message.error(error.message || 'Failed to fetch departments');
     } finally {
       setLoading(false);
     }
@@ -99,8 +99,8 @@ const Departments: React.FC = () => {
       await apiService.deleteDepartment(id);
       message.success('Department deleted successfully');
       fetchData(); // Refresh the data
-    } catch (error) {
-      message.error('Failed to delete department');
+    } catch (error: any) {
+      message.error(error.message || 'Failed to delete department');
     }
   };
 
@@ -118,8 +118,8 @@ const Departments: React.FC = () => {
       setModalVisible(false);
       form.resetFields();
       fetchData(); // Refresh the data
-    } catch (error) {
-      message.error('Failed to save department');
+    } catch (error: any) {
+      message.error(error.message || 'Failed to save department');
     }
   };
 

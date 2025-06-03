@@ -108,8 +108,8 @@ const Manufacturers: React.FC = () => {
     try {
       const manufacturers = await apiService.getManufacturers();
       setData(manufacturers);
-    } catch (error) {
-      message.error('Failed to fetch manufacturers');
+    } catch (error: any) {
+      message.error(error.message || 'Failed to fetch manufacturers');
     } finally {
       setLoading(false);
     }
@@ -148,8 +148,8 @@ const Manufacturers: React.FC = () => {
       await apiService.deleteManufacturer(id);
       message.success('Manufacturer deleted successfully');
       fetchData(); // Refresh the data
-    } catch (error) {
-      message.error('Failed to delete manufacturer');
+    } catch (error: any) {
+      message.error(error.message || 'Failed to delete manufacturer');
     }
   };
 
@@ -177,8 +177,8 @@ const Manufacturers: React.FC = () => {
       form.resetFields();
       setFileList([]);
       fetchData(); // Refresh the data
-    } catch (error) {
-      message.error('Failed to save manufacturer');
+    } catch (error: any) {
+      message.error(error.message || 'Failed to save manufacturer');
     }
   };
 
@@ -186,8 +186,8 @@ const Manufacturers: React.FC = () => {
     try {
       const response = await apiService.uploadImage(file);
       return response;
-    } catch (error) {
-      message.error('Upload failed');
+    } catch (error: any) {
+      message.error(error.message || 'Upload failed');
       throw error;
     }
   };

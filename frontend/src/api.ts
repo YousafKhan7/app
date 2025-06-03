@@ -9,6 +9,28 @@ const api = axios.create({
   },
 });
 
+// Add response interceptor to handle errors globally
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Log the full error for debugging
+    console.log('API Error:', error);
+    console.log('Error Response:', error.response);
+    console.log('Error Response Data:', error.response?.data);
+
+    // Extract error message from response
+    const errorMessage = error.response?.data?.detail ||
+                        error.response?.data?.message ||
+                        error.message ||
+                        'An unexpected error occurred';
+
+    console.log('Extracted Error Message:', errorMessage);
+
+    // Throw a new error with the extracted message
+    throw new Error(errorMessage);
+  }
+);
+
 export interface User {
   id: number;
   name: string;

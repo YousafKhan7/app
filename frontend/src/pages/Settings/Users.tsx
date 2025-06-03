@@ -82,8 +82,8 @@ const Users: React.FC = () => {
     try {
       const usersData = await apiService.getUsers();
       setData(usersData);
-    } catch (error) {
-      message.error('Failed to fetch users');
+    } catch (error: any) {
+      message.error(error.message || 'Failed to fetch users');
     } finally {
       setLoading(false);
     }
@@ -110,8 +110,8 @@ const Users: React.FC = () => {
       await apiService.deleteUser(id);
       message.success('User deleted successfully');
       fetchData(); // Refresh the data
-    } catch (error) {
-      message.error('Failed to delete user');
+    } catch (error: any) {
+      message.error(error.message || 'Failed to delete user');
     }
   };
 
@@ -129,8 +129,8 @@ const Users: React.FC = () => {
       setModalVisible(false);
       form.resetFields();
       fetchData(); // Refresh the data
-    } catch (error) {
-      message.error('Failed to save user');
+    } catch (error: any) {
+      message.error(error.message || 'Failed to save user');
     }
   };
 

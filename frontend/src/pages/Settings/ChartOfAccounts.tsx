@@ -7,7 +7,6 @@ import {
   Form,
   Input,
   Switch,
-  message,
   Space,
   Typography,
   Popconfirm,
@@ -16,6 +15,8 @@ import {
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { apiService } from '../../api';
 import type { ChartOfAccount, ChartOfAccountCreate, Currency, AccountType, AccountTypeCreate } from '../../api';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
+import ErrorToast from '../../components/ErrorDisplay/ErrorToast';
 
 const { Title } = Typography;
 
@@ -28,6 +29,9 @@ const ChartOfAccounts: React.FC = () => {
   const [editingRecord, setEditingRecord] = useState<ChartOfAccount | null>(null);
   const [form] = Form.useForm();
   const [newTypeName, setNewTypeName] = useState('');
+
+  // Use our custom error handler hook
+  const { errorMessage, showError, clearError } = useErrorHandler();
 
   const columns = [
     {
@@ -111,8 +115,8 @@ const ChartOfAccounts: React.FC = () => {
     try {
       const accounts = await apiService.getChartOfAccounts();
       setData(accounts);
-    } catch (error) {
-      message.error('Failed to fetch chart of accounts');
+    } catch (error: any) {
+      showError(error.message || 'Failed to fetch chart of accounts');
     } finally {
       setLoading(false);
     }
@@ -122,8 +126,8 @@ const ChartOfAccounts: React.FC = () => {
     try {
       const currenciesData = await apiService.getCurrencies();
       setCurrencies(currenciesData);
-    } catch (error) {
-      message.error('Failed to fetch currencies');
+    } catch (error: any) {
+      showError(error.message || 'Failed to fetch currencies');
     }
   };
 
@@ -131,24 +135,25 @@ const ChartOfAccounts: React.FC = () => {
     try {
       const accountTypesData = await apiService.getAccountTypes();
       setAccountTypes(accountTypesData);
-    } catch (error) {
-      message.error('Failed to fetch account types');
+    } catch (error: any) {
+      showError(error.message || 'Failed to fetch account types');
     }
   };
 
   const handleAddNewType = async () => {
     if (!newTypeName.trim()) {
-      message.error('Please enter a type name');
+      showError('Please enter a type name');
       return;
     }
 
     try {
       await apiService.createAccountType({ name: newTypeName.trim() });
-      message.success('Account type added successfully');
+      // Show success message (we can create a success version later)
+      console.log('Account type added successfully');
       setNewTypeName('');
       fetchAccountTypes(); // Refresh the types list
-    } catch (error) {
-      message.error('Failed to add account type');
+    } catch (error: any) {
+      showError(error.message || 'Failed to add account type');
     }
   };
 
@@ -173,15 +178,16 @@ const ChartOfAccounts: React.FC = () => {
   const handleDelete = async (id: number) => {
     try {
       await apiService.deleteChartOfAccount(id);
-      message.success('Account deleted successfully');
+      console.log('Account deleted successfully');
       fetchData(); // Refresh the data
-    } catch (error) {
-      message.error('Failed to delete account');
+    } catch (error: any) {
+      showError(error.message || 'Failed to delete account');
     }
   };
 
   const handleSubmit = async (values: ChartOfAccountCreate) => {
     try {
+      console.log('Submitting values:', values);
       if (editingRecord) {
         // Update existing record
         await apiService.updateChartOfAccount(editingRecord.id, values);
@@ -194,8 +200,16 @@ const ChartOfAccounts: React.FC = () => {
       setModalVisible(false);
       form.resetFields();
       fetchData(); // Refresh the data
-    } catch (error) {
-      message.error('Failed to save account');
+    } catch (error: any) {
+      console.log('Error caught in handleSubmit:', error);
+      console.log('Error message:', error.message);
+      console.log('Full error object:', error);
+
+      // Show error message using our custom error display
+      const errorMsg = error.message || 'Failed to save account';
+
+      // Use our custom error display
+      showError(errorMsg);
     }
   };
 
@@ -203,8 +217,8 @@ const ChartOfAccounts: React.FC = () => {
     <div>
       <div className="flex justify-between items-center mb-6">
         <Title level={2}>Chart of Accounts</Title>
-        <Button 
-          type="primary" 
+        <Button
+          type="primary"
           icon={<PlusOutlined />}
           onClick={handleAdd}
         >
@@ -238,6 +252,8 @@ const ChartOfAccounts: React.FC = () => {
           layout="vertical"
           onFinish={handleSubmit}
         >
+          {/* Error Display at the top of the form */}
+          <ErrorToast message={errorMessage} onClose={clearError} />
           <Form.Item
             name="number"
             label="Number"

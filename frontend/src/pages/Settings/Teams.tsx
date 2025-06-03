@@ -71,8 +71,8 @@ const Teams: React.FC = () => {
     try {
       const teams = await apiService.getTeams();
       setData(teams);
-    } catch (error) {
-      message.error('Failed to fetch teams');
+    } catch (error: any) {
+      message.error(error.message || 'Failed to fetch teams');
     } finally {
       setLoading(false);
     }
@@ -99,8 +99,8 @@ const Teams: React.FC = () => {
       await apiService.deleteTeam(id);
       message.success('Team deleted successfully');
       fetchData(); // Refresh the data
-    } catch (error) {
-      message.error('Failed to delete team');
+    } catch (error: any) {
+      message.error(error.message || 'Failed to delete team');
     }
   };
 
@@ -118,8 +118,8 @@ const Teams: React.FC = () => {
       setModalVisible(false);
       form.resetFields();
       fetchData(); // Refresh the data
-    } catch (error) {
-      message.error('Failed to save team');
+    } catch (error: any) {
+      message.error(error.message || 'Failed to save team');
     }
   };
 

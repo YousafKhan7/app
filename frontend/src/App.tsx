@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { ConfigProvider, message } from 'antd';
 import MainLayout from './components/Layout/MainLayout';
 import Dashboard from './pages/Dashboard';
 import ChartOfAccounts from './pages/Settings/ChartOfAccounts';
@@ -12,22 +13,31 @@ import Teams from './pages/Settings/Teams';
 import Warehouses from './pages/Settings/Warehouses';
 
 function App() {
+  // Configure message to appear at the top with proper styling
+  message.config({
+    top: 100,
+    duration: 5,
+    maxCount: 3,
+  });
+
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<MainLayout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="settings/chart-of-accounts" element={<ChartOfAccounts />} />
-          <Route path="settings/departments" element={<Departments />} />
-          <Route path="settings/locations" element={<Locations />} />
-          <Route path="settings/currencies" element={<Currencies />} />
-          <Route path="settings/manufacturers" element={<Manufacturers />} />
-          <Route path="settings/users" element={<Users />} />
-          <Route path="settings/teams" element={<Teams />} />
-          <Route path="settings/warehouses" element={<Warehouses />} />
-        </Route>
-      </Routes>
-    </Router>
+    <ConfigProvider>
+      <Router>
+        <Routes>
+          <Route path="/" element={<MainLayout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="settings/chart-of-accounts" element={<ChartOfAccounts />} />
+            <Route path="settings/departments" element={<Departments />} />
+            <Route path="settings/locations" element={<Locations />} />
+            <Route path="settings/currencies" element={<Currencies />} />
+            <Route path="settings/manufacturers" element={<Manufacturers />} />
+            <Route path="settings/users" element={<Users />} />
+            <Route path="settings/teams" element={<Teams />} />
+            <Route path="settings/warehouses" element={<Warehouses />} />
+          </Route>
+        </Routes>
+      </Router>
+    </ConfigProvider>
   );
 }
 

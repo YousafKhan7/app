@@ -82,8 +82,8 @@ const Currencies: React.FC = () => {
     try {
       const currencies = await apiService.getCurrencies();
       setData(currencies);
-    } catch (error) {
-      message.error('Failed to fetch currencies');
+    } catch (error: any) {
+      message.error(error.message || 'Failed to fetch currencies');
     } finally {
       setLoading(false);
     }
@@ -113,8 +113,8 @@ const Currencies: React.FC = () => {
       await apiService.deleteCurrency(id);
       message.success('Currency deleted successfully');
       fetchData(); // Refresh the data
-    } catch (error) {
-      message.error('Failed to delete currency');
+    } catch (error: any) {
+      message.error(error.message || 'Failed to delete currency');
     }
   };
 
@@ -137,8 +137,8 @@ const Currencies: React.FC = () => {
       setModalVisible(false);
       form.resetFields();
       fetchData(); // Refresh the data
-    } catch (error) {
-      message.error('Failed to save currency');
+    } catch (error: any) {
+      message.error(error.message || 'Failed to save currency');
     }
   };
 

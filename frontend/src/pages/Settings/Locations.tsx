@@ -71,8 +71,8 @@ const Locations: React.FC = () => {
     try {
       const locations = await apiService.getLocations();
       setData(locations);
-    } catch (error) {
-      message.error('Failed to fetch locations');
+    } catch (error: any) {
+      message.error(error.message || 'Failed to fetch locations');
     } finally {
       setLoading(false);
     }
@@ -99,8 +99,8 @@ const Locations: React.FC = () => {
       await apiService.deleteLocation(id);
       message.success('Location deleted successfully');
       fetchData(); // Refresh the data
-    } catch (error) {
-      message.error('Failed to delete location');
+    } catch (error: any) {
+      message.error(error.message || 'Failed to delete location');
     }
   };
 
@@ -118,8 +118,8 @@ const Locations: React.FC = () => {
       setModalVisible(false);
       form.resetFields();
       fetchData(); // Refresh the data
-    } catch (error) {
-      message.error('Failed to save location');
+    } catch (error: any) {
+      message.error(error.message || 'Failed to save location');
     }
   };
 

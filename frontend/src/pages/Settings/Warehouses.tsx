@@ -79,8 +79,8 @@ const Warehouses: React.FC = () => {
     try {
       const warehouses = await apiService.getWarehouses();
       setData(warehouses);
-    } catch (error) {
-      message.error('Failed to fetch warehouses');
+    } catch (error: any) {
+      message.error(error.message || 'Failed to fetch warehouses');
     } finally {
       setLoading(false);
     }
@@ -107,8 +107,8 @@ const Warehouses: React.FC = () => {
       await apiService.deleteWarehouse(id);
       message.success('Warehouse deleted successfully');
       fetchData(); // Refresh the data
-    } catch (error) {
-      message.error('Failed to delete warehouse');
+    } catch (error: any) {
+      message.error(error.message || 'Failed to delete warehouse');
     }
   };
 
@@ -126,8 +126,8 @@ const Warehouses: React.FC = () => {
       setModalVisible(false);
       form.resetFields();
       fetchData(); // Refresh the data
-    } catch (error) {
-      message.error('Failed to save warehouse');
+    } catch (error: any) {
+      message.error(error.message || 'Failed to save warehouse');
     }
   };
 
