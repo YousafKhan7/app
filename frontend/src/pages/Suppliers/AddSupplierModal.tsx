@@ -34,6 +34,16 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({
   const [users, setUsers] = useState<User[]>([]);
   const [currencies, setCurrencies] = useState<Currency[]>([]);
 
+  // File format options
+  const fileFormatOptions = [
+    { value: 'CSV', label: 'CSV' },
+    { value: 'Excel', label: 'Excel' },
+    { value: 'PDF', label: 'PDF' },
+    { value: 'XML', label: 'XML' },
+    { value: 'JSON', label: 'JSON' },
+    { value: 'TXT', label: 'TXT' }
+  ];
+
   // Use our custom error handler hook
   const { errorMessage, showError, clearError } = useErrorHandler();
 
@@ -253,7 +263,7 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({
           </Row>
 
           <Row gutter={16}>
-            <Col span={8}>
+            <Col span={12}>
               <Form.Item
                 label="Bank Name"
                 name="bank_name"
@@ -261,6 +271,21 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({
                 <Input placeholder="Enter bank name" />
               </Form.Item>
             </Col>
+            <Col span={12}>
+              <Form.Item
+                label="File Format"
+                name="file_format"
+              >
+                <Select placeholder="Select file format" allowClear>
+                  {fileFormatOptions.map(option => (
+                    <Option key={option.value} value={option.value}>{option.label}</Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
             <Col span={8}>
               <Form.Item
                 label="Account Number"
@@ -277,23 +302,12 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({
                 <Input placeholder="Enter institution" />
               </Form.Item>
             </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
+            <Col span={8}>
               <Form.Item
                 label="Transit"
                 name="transit"
               >
-                <Input placeholder="Enter transit" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                label="File Format"
-                name="file_format"
-              >
-                <Input placeholder="Enter file format" />
+                <Input placeholder="Enter transit number" />
               </Form.Item>
             </Col>
           </Row>
