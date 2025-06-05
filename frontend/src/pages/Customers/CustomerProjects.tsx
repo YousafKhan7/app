@@ -33,7 +33,7 @@ const CustomerProjects: React.FC<CustomerProjectsProps> = ({ customerId }) => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(false);
-  const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
+  const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('');
 
   // Use our custom error handler hook
@@ -160,11 +160,11 @@ const CustomerProjects: React.FC<CustomerProjectsProps> = ({ customerId }) => {
     let filtered = [...projects];
 
     // Apply date range filter
-    if (dateRange) {
+    if (dateRange && dateRange[0] && dateRange[1]) {
       const [startDate, endDate] = dateRange;
       filtered = filtered.filter(project => {
         const projectDate = dayjs(project.date);
-        return projectDate.isAfter(startDate.subtract(1, 'day')) && 
+        return projectDate.isAfter(startDate.subtract(1, 'day')) &&
                projectDate.isBefore(endDate.add(1, 'day'));
       });
     }
@@ -234,7 +234,7 @@ const CustomerProjects: React.FC<CustomerProjectsProps> = ({ customerId }) => {
               </label>
               <RangePicker
                 value={dateRange}
-                onChange={setDateRange}
+                onChange={(dates) => setDateRange(dates)}
                 style={{ width: '100%' }}
                 placeholder={['Start Date', 'End Date']}
               />

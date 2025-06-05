@@ -101,9 +101,13 @@ class LocationCreate(BaseModel):
 
 class Currency(BaseModel):
     id: int = None
-    currency: str
+    name: str  # This will be the currency name/code
+    code: str  # This will be the same as name for now
+    currency: str  # Keep for backward compatibility
     rate: float
     effective_date: str
+    created_at: str = None
+    updated_at: str = None
 
 class CurrencyCreate(BaseModel):
     currency: str
@@ -179,6 +183,45 @@ class Customer(BaseModel):
     transit: str = None
 
 class CustomerCreate(BaseModel):
+    name: str
+    category: str = None
+    sales_rep_id: int = None
+    phone: str = None
+    email: str = None
+    address: str = None
+    contact_name: str = None
+    contact_title: str = None
+    contact_phone: str = None
+    contact_email: str = None
+    currency_id: int = None
+    tax_rate: float = 0.00
+    bank_name: str = None
+    file_format: str = None
+    account_number: str = None
+    institution: str = None
+    transit: str = None
+
+class Supplier(BaseModel):
+    id: int = None
+    name: str
+    category: str = None
+    sales_rep_id: int = None
+    phone: str = None
+    email: str = None
+    address: str = None
+    contact_name: str = None
+    contact_title: str = None
+    contact_phone: str = None
+    contact_email: str = None
+    currency_id: int = None
+    tax_rate: float = 0.00
+    bank_name: str = None
+    file_format: str = None
+    account_number: str = None
+    institution: str = None
+    transit: str = None
+
+class SupplierCreate(BaseModel):
     name: str
     category: str = None
     sales_rep_id: int = None
@@ -432,7 +475,12 @@ async def delete_location(location_id: int):
 # Currencies endpoints
 @app.get("/currencies")
 async def get_currencies():
-    currencies = execute_query("SELECT * FROM currencies ORDER BY currency", fetch_all=True)
+    query = """
+    SELECT id, currency, currency as name, currency as code, rate, effective_date,
+           CURRENT_TIMESTAMP as created_at, CURRENT_TIMESTAMP as updated_at
+    FROM currencies ORDER BY currency
+    """
+    currencies = execute_query(query, fetch_all=True)
     return {"currencies": currencies}
 
 @app.post("/currencies")
@@ -605,6 +653,57 @@ async def delete_customer(customer_id: int):
     query = "DELETE FROM customers WHERE id=%s"
     execute_query(query, (customer_id,))
     return {"message": "Customer deleted successfully"}
+
+# Suppliers endpoints
+@app.get("/suppliers")
+async def get_suppliers():
+    query = """
+    SELECT s.*, u.name as sales_rep_name, cur.currency as currency_name
+    FROM suppliers s
+    LEFT JOIN users u ON s.sales_rep_id = u.id
+    LEFT JOIN currencies cur ON s.currency_id = cur.id
+    ORDER BY s.name
+    """
+    suppliers = execute_query(query, fetch_all=True)
+    return {"suppliers": suppliers}
+
+@app.post("/suppliers")
+async def create_supplier(supplier: SupplierCreate):
+    query = """INSERT INTO suppliers
+               (name, category, sales_rep_id, phone, email, address, contact_name, contact_title,
+                contact_phone, contact_email, currency_id, tax_rate, bank_name, file_format,
+                account_number, institution, transit)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id"""
+    result = execute_query(query, (
+        supplier.name, supplier.category, supplier.sales_rep_id, supplier.phone, supplier.email,
+        supplier.address, supplier.contact_name, supplier.contact_title, supplier.contact_phone,
+        supplier.contact_email, supplier.currency_id, supplier.tax_rate, supplier.bank_name,
+        supplier.file_format, supplier.account_number, supplier.institution, supplier.transit
+    ), fetch_one=True)
+    return {"message": "Supplier created successfully", "supplier_id": result['id'], "supplier": {"id": result['id'], **supplier.model_dump()}}
+
+@app.put("/suppliers/{supplier_id}")
+async def update_supplier(supplier_id: int, supplier: SupplierCreate):
+    query = """UPDATE suppliers
+               SET name=%s, category=%s, sales_rep_id=%s, phone=%s, email=%s, address=%s,
+                   contact_name=%s, contact_title=%s, contact_phone=%s, contact_email=%s,
+                   currency_id=%s, tax_rate=%s, bank_name=%s, file_format=%s, account_number=%s,
+                   institution=%s, transit=%s
+               WHERE id=%s"""
+    execute_query(query, (
+        supplier.name, supplier.category, supplier.sales_rep_id, supplier.phone, supplier.email,
+        supplier.address, supplier.contact_name, supplier.contact_title, supplier.contact_phone,
+        supplier.contact_email, supplier.currency_id, supplier.tax_rate, supplier.bank_name,
+        supplier.file_format, supplier.account_number, supplier.institution, supplier.transit,
+        supplier_id
+    ))
+    return {"message": "Supplier updated successfully"}
+
+@app.delete("/suppliers/{supplier_id}")
+async def delete_supplier(supplier_id: int):
+    query = "DELETE FROM suppliers WHERE id=%s"
+    execute_query(query, (supplier_id,))
+    return {"message": "Supplier deleted successfully"}
 
 # Customer Quotes endpoints
 @app.get("/customers/{customer_id}/quotes")

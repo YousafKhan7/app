@@ -231,6 +231,51 @@ export interface CustomerCreate {
   transit?: string;
 }
 
+export interface Supplier {
+  id: number;
+  name: string;
+  category?: string;
+  sales_rep_id?: number;
+  phone?: string;
+  email?: string;
+  address?: string;
+  contact_name?: string;
+  contact_title?: string;
+  contact_phone?: string;
+  contact_email?: string;
+  currency_id?: number;
+  tax_rate: number;
+  bank_name?: string;
+  file_format?: string;
+  account_number?: string;
+  institution?: string;
+  transit?: string;
+  sales_rep_name?: string;
+  currency_name?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface SupplierCreate {
+  name: string;
+  category?: string;
+  sales_rep_id?: number;
+  phone?: string;
+  email?: string;
+  address?: string;
+  contact_name?: string;
+  contact_title?: string;
+  contact_phone?: string;
+  contact_email?: string;
+  currency_id?: number;
+  tax_rate: number;
+  bank_name?: string;
+  file_format?: string;
+  account_number?: string;
+  institution?: string;
+  transit?: string;
+}
+
 export interface Quote {
   id: number;
   job_id: string;
@@ -536,6 +581,27 @@ export const apiService = {
   getCustomerAccounts: async (customerId: number): Promise<CustomerAccount[]> => {
     const response = await api.get(`/customers/${customerId}/accounts`);
     return response.data.accounts;
+  },
+
+  // Suppliers
+  getSuppliers: async (): Promise<Supplier[]> => {
+    const response = await api.get('/suppliers');
+    return response.data.suppliers;
+  },
+
+  createSupplier: async (supplier: SupplierCreate): Promise<any> => {
+    const response = await api.post('/suppliers', supplier);
+    return response.data;
+  },
+
+  updateSupplier: async (id: number, supplier: SupplierCreate): Promise<any> => {
+    const response = await api.put(`/suppliers/${id}`, supplier);
+    return response.data;
+  },
+
+  deleteSupplier: async (id: number): Promise<any> => {
+    const response = await api.delete(`/suppliers/${id}`);
+    return response.data;
   },
 
   // Quotes

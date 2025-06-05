@@ -48,8 +48,16 @@ const Customers: React.FC = () => {
     setSelectedCustomer(customer);
   };
 
-  const handleCustomerUpdate = () => {
-    fetchCustomers(); // Refresh customer list after updates
+  const handleCustomerUpdate = async () => {
+    await fetchCustomers(); // Refresh customer list after updates
+    // Update selected customer with fresh data
+    if (selectedCustomer) {
+      const updatedCustomers = await apiService.getCustomers();
+      const updatedSelectedCustomer = updatedCustomers.find(c => c.id === selectedCustomer.id);
+      if (updatedSelectedCustomer) {
+        setSelectedCustomer(updatedSelectedCustomer);
+      }
+    }
   };
 
   const handleAddCustomer = () => {
@@ -60,6 +68,11 @@ const Customers: React.FC = () => {
     setShowAddModal(false);
     fetchCustomers();
     setSelectedCustomer(newCustomer);
+  };
+
+  const handleCustomerDelete = () => {
+    setSelectedCustomer(null);
+    fetchCustomers();
   };
 
   if (loading && customers.length === 0) {
@@ -141,6 +154,7 @@ const Customers: React.FC = () => {
               <CustomerInfo
                 customer={selectedCustomer}
                 onUpdate={handleCustomerUpdate}
+                onDelete={handleCustomerDelete}
               />
             </Card>
           ) : (

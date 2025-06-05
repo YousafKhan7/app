@@ -13,6 +13,7 @@ import Teams from './pages/Settings/Teams';
 import Warehouses from './pages/Settings/Warehouses';
 import Commissions from './pages/Settings/Commissions';
 import Customers from './pages/Customers/Customers';
+import Suppliers from './pages/Suppliers/Suppliers';
 import Quotes from './pages/Quotes/Quotes';
 import Projects from './pages/Projects/Projects';
 import Accounts from './pages/Accounts/Accounts';
@@ -32,6 +33,7 @@ function App() {
           <Route path="/" element={<MainLayout />}>
             <Route index element={<Dashboard />} />
             <Route path="customers" element={<Customers />} />
+            <Route path="suppliers" element={<Suppliers />} />
             <Route path="quotes" element={<Quotes />} />
             <Route path="projects" element={<Projects />} />
             <Route path="accounts" element={<Accounts />} />

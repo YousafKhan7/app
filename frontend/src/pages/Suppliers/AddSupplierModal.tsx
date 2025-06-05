@@ -1,0 +1,306 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Modal,
+  Form,
+  Input,
+  Button,
+  Row,
+  Col,
+  Select,
+  InputNumber,
+  message
+} from 'antd';
+import { apiService } from '../../api';
+import type { Supplier, SupplierCreate, User, Currency } from '../../api';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
+import ErrorToast from '../../components/ErrorDisplay/ErrorToast';
+
+const { Option } = Select;
+const { TextArea } = Input;
+
+interface AddSupplierModalProps {
+  visible: boolean;
+  onCancel: () => void;
+  onSuccess: (supplier: Supplier) => void;
+}
+
+const AddSupplierModal: React.FC<AddSupplierModalProps> = ({
+  visible,
+  onCancel,
+  onSuccess
+}) => {
+  const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
+  const [users, setUsers] = useState<User[]>([]);
+  const [currencies, setCurrencies] = useState<Currency[]>([]);
+
+  // Use our custom error handler hook
+  const { errorMessage, showError, clearError } = useErrorHandler();
+
+  useEffect(() => {
+    if (visible) {
+      fetchUsers();
+      fetchCurrencies();
+      form.resetFields();
+    }
+  }, [visible, form]);
+
+  const fetchUsers = async () => {
+    try {
+      const userData = await apiService.getUsers();
+      setUsers(userData);
+    } catch (error: any) {
+      showError(error.message || 'Failed to fetch users');
+    }
+  };
+
+  const fetchCurrencies = async () => {
+    try {
+      const currencyData = await apiService.getCurrencies();
+      setCurrencies(currencyData);
+    } catch (error: any) {
+      showError(error.message || 'Failed to fetch currencies');
+    }
+  };
+
+  const handleSubmit = async (values: SupplierCreate) => {
+    setLoading(true);
+    try {
+      const response = await apiService.createSupplier(values);
+      message.success('Supplier created successfully');
+      form.resetFields();
+      onSuccess(response.supplier);
+    } catch (error: any) {
+      showError(error.message || 'Failed to create supplier');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancel = () => {
+    form.resetFields();
+    clearError();
+    onCancel();
+  };
+
+  return (
+    <>
+      <Modal
+        title="Add New Supplier"
+        open={visible}
+        onCancel={handleCancel}
+        footer={[
+          <Button key="cancel" onClick={handleCancel}>
+            Cancel
+          </Button>,
+          <Button
+            key="submit"
+            type="primary"
+            loading={loading}
+            onClick={() => form.submit()}
+          >
+            Create Supplier
+          </Button>,
+        ]}
+        width={800}
+        destroyOnClose
+      >
+        {/* Error Display */}
+        <ErrorToast message={errorMessage} onClose={clearError} />
+
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSubmit}
+          initialValues={{
+            tax_rate: 0
+          }}
+        >
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="Supplier Name"
+                name="name"
+                rules={[{ required: true, message: 'Please enter supplier name' }]}
+              >
+                <Input placeholder="Enter supplier name" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="Category"
+                name="category"
+              >
+                <Input placeholder="Enter category" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="Sales Representative"
+                name="sales_rep_id"
+              >
+                <Select placeholder="Select sales representative" allowClear>
+                  {users.map(user => (
+                    <Option key={user.id} value={user.id}>
+                      {user.name}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="Phone"
+                name="phone"
+              >
+                <Input placeholder="Enter phone number" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="Email"
+                name="email"
+                rules={[{ type: 'email', message: 'Please enter a valid email' }]}
+              >
+                <Input placeholder="Enter email address" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="Address"
+                name="address"
+              >
+                <TextArea rows={3} placeholder="Enter address" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="Contact Name"
+                name="contact_name"
+              >
+                <Input placeholder="Enter contact name" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="Contact Title"
+                name="contact_title"
+              >
+                <Input placeholder="Enter contact title" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="Contact Phone"
+                name="contact_phone"
+              >
+                <Input placeholder="Enter contact phone" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="Contact Email"
+                name="contact_email"
+                rules={[{ type: 'email', message: 'Please enter a valid email' }]}
+              >
+                <Input placeholder="Enter contact email" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="Currency"
+                name="currency_id"
+              >
+                <Select placeholder="Select currency" allowClear>
+                  {currencies.map(currency => (
+                    <Option key={currency.id} value={currency.id}>
+                      {currency.name} ({currency.code})
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="Tax Rate (%)"
+                name="tax_rate"
+                rules={[{ required: true, message: 'Please enter tax rate' }]}
+              >
+                <InputNumber
+                  min={0}
+                  max={100}
+                  step={0.01}
+                  placeholder="Enter tax rate"
+                  style={{ width: '100%' }}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item
+                label="Bank Name"
+                name="bank_name"
+              >
+                <Input placeholder="Enter bank name" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item
+                label="Account Number"
+                name="account_number"
+              >
+                <Input placeholder="Enter account number" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item
+                label="Institution"
+                name="institution"
+              >
+                <Input placeholder="Enter institution" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="Transit"
+                name="transit"
+              >
+                <Input placeholder="Enter transit" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="File Format"
+                name="file_format"
+              >
+                <Input placeholder="Enter file format" />
+              </Form.Item>
+            </Col>
+          </Row>
+        </Form>
+      </Modal>
+    </>
+  );
+};
+
+export default AddSupplierModal;

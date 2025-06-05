@@ -16,7 +16,7 @@ import {
 } from 'antd';
 import { EditOutlined, SaveOutlined, CloseOutlined, DeleteOutlined } from '@ant-design/icons';
 import { apiService } from '../../api';
-import type { Customer, CustomerCreate, User, Currency } from '../../api';
+import type { Supplier, SupplierCreate, User, Currency } from '../../api';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
 import ErrorToast from '../../components/ErrorDisplay/ErrorToast';
 
@@ -24,13 +24,13 @@ const { Title } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
 
-interface CustomerInfoProps {
-  customer: Customer;
+interface SupplierInfoProps {
+  supplier: Supplier;
   onUpdate: () => void;
   onDelete?: () => void;
 }
 
-const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer, onUpdate, onDelete }) => {
+const SupplierInfo: React.FC<SupplierInfoProps> = ({ supplier, onUpdate, onDelete }) => {
   const [form] = Form.useForm();
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -46,54 +46,95 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer, onUpdate, onDelet
     { value: 'Excel', label: 'Excel' },
     { value: 'PDF', label: 'PDF' },
     { value: 'XML', label: 'XML' },
-    { value: 'JSON', label: 'JSON' }
+    { value: 'JSON', label: 'JSON' },
+    { value: 'TXT', label: 'TXT' }
   ];
 
   useEffect(() => {
-    fetchDropdownData();
-    // Set form values when customer changes
-    form.setFieldsValue({
-      ...customer,
-      tax_rate: customer.tax_rate || 0
-    });
-  }, [customer, form]);
+    fetchUsers();
+    fetchCurrencies();
+  }, []);
 
-  const fetchDropdownData = async () => {
+  useEffect(() => {
+    if (supplier) {
+      form.setFieldsValue({
+        name: supplier.name,
+        category: supplier.category,
+        sales_rep_id: supplier.sales_rep_id,
+        phone: supplier.phone,
+        email: supplier.email,
+        address: supplier.address,
+        contact_name: supplier.contact_name,
+        contact_title: supplier.contact_title,
+        contact_phone: supplier.contact_phone,
+        contact_email: supplier.contact_email,
+        currency_id: supplier.currency_id,
+        tax_rate: supplier.tax_rate,
+        bank_name: supplier.bank_name,
+        file_format: supplier.file_format,
+        account_number: supplier.account_number,
+        institution: supplier.institution,
+        transit: supplier.transit,
+      });
+    }
+  }, [supplier, form]);
+
+  const fetchUsers = async () => {
     try {
-      const [usersData, currenciesData] = await Promise.all([
-        apiService.getUsers(),
-        apiService.getCurrencies()
-      ]);
-      setUsers(usersData);
-      setCurrencies(currenciesData);
+      const userData = await apiService.getUsers();
+      setUsers(userData);
     } catch (error: any) {
-      showError(error.message || 'Failed to fetch dropdown data');
+      showError(error.message || 'Failed to fetch users');
+    }
+  };
+
+  const fetchCurrencies = async () => {
+    try {
+      const currencyData = await apiService.getCurrencies();
+      setCurrencies(currencyData);
+    } catch (error: any) {
+      showError(error.message || 'Failed to fetch currencies');
     }
   };
 
   const handleEdit = () => {
     setEditing(true);
-    clearError();
   };
 
   const handleCancel = () => {
     setEditing(false);
+    form.resetFields();
+    // Reset form to original values
     form.setFieldsValue({
-      ...customer,
-      tax_rate: customer.tax_rate || 0
+      name: supplier.name,
+      category: supplier.category,
+      sales_rep_id: supplier.sales_rep_id,
+      phone: supplier.phone,
+      email: supplier.email,
+      address: supplier.address,
+      contact_name: supplier.contact_name,
+      contact_title: supplier.contact_title,
+      contact_phone: supplier.contact_phone,
+      contact_email: supplier.contact_email,
+      currency_id: supplier.currency_id,
+      tax_rate: supplier.tax_rate,
+      bank_name: supplier.bank_name,
+      file_format: supplier.file_format,
+      account_number: supplier.account_number,
+      institution: supplier.institution,
+      transit: supplier.transit,
     });
-    clearError();
   };
 
-  const handleSave = async (values: CustomerCreate) => {
+  const handleSave = async (values: SupplierCreate) => {
     setLoading(true);
     try {
-      await apiService.updateCustomer(customer.id, values);
+      await apiService.updateSupplier(supplier.id, values);
       setEditing(false);
-      onUpdate(); // Refresh customer data
-      message.success('Customer updated successfully');
+      onUpdate(); // Refresh supplier data
+      message.success('Supplier updated successfully');
     } catch (error: any) {
-      showError(error.message || 'Failed to update customer');
+      showError(error.message || 'Failed to update supplier');
     } finally {
       setLoading(false);
     }
@@ -102,13 +143,13 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer, onUpdate, onDelet
   const handleDelete = async () => {
     setLoading(true);
     try {
-      await apiService.deleteCustomer(customer.id);
-      message.success('Customer deleted successfully');
+      await apiService.deleteSupplier(supplier.id);
+      message.success('Supplier deleted successfully');
       if (onDelete) {
         onDelete();
       }
     } catch (error: any) {
-      showError(error.message || 'Failed to delete customer');
+      showError(error.message || 'Failed to delete supplier');
     } finally {
       setLoading(false);
     }
@@ -116,26 +157,29 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer, onUpdate, onDelet
 
   return (
     <div>
+      {/* Error Display */}
+      <ErrorToast message={errorMessage} onClose={clearError} />
+
       <div className="flex justify-between items-center mb-6">
-        <Title level={4}>Customer Information</Title>
+        <Title level={4}>Supplier Information</Title>
         {!editing ? (
           <Space>
-            <Button
-              type="primary"
+            <Button 
+              type="primary" 
               icon={<EditOutlined />}
               onClick={handleEdit}
             >
               Edit
             </Button>
             <Popconfirm
-              title="Delete Customer"
-              description="Are you sure you want to delete this customer? This action cannot be undone."
+              title="Delete Supplier"
+              description="Are you sure you want to delete this supplier? This action cannot be undone."
               onConfirm={handleDelete}
               okText="Yes, Delete"
               cancelText="Cancel"
               okType="danger"
             >
-              <Button
+              <Button 
                 danger
                 icon={<DeleteOutlined />}
                 loading={loading}
@@ -146,13 +190,13 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer, onUpdate, onDelet
           </Space>
         ) : (
           <Space>
-            <Button
+            <Button 
               icon={<CloseOutlined />}
               onClick={handleCancel}
             >
               Cancel
             </Button>
-            <Button
+            <Button 
               type="primary"
               icon={<SaveOutlined />}
               loading={loading}
@@ -164,9 +208,6 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer, onUpdate, onDelet
         )}
       </div>
 
-      {/* Error Display */}
-      <ErrorToast message={errorMessage} onClose={clearError} />
-
       {!editing ? (
         // Read-only view
         <div>
@@ -175,14 +216,14 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer, onUpdate, onDelet
             <Row gutter={16}>
               <Col span={12}>
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
-                  <div className="text-base">{customer.name || '-'}</div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Supplier Name</label>
+                  <div className="text-base">{supplier.name || '-'}</div>
                 </div>
               </Col>
               <Col span={12}>
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                  <div className="text-base">{customer.category || '-'}</div>
+                  <div className="text-base">{supplier.category || '-'}</div>
                 </div>
               </Col>
             </Row>
@@ -191,13 +232,13 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer, onUpdate, onDelet
               <Col span={12}>
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Sales Representative</label>
-                  <div className="text-base">{customer.sales_rep_name || '-'}</div>
+                  <div className="text-base">{supplier.sales_rep_name || '-'}</div>
                 </div>
               </Col>
               <Col span={12}>
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                  <div className="text-base">{customer.phone || '-'}</div>
+                  <div className="text-base">{supplier.phone || '-'}</div>
                 </div>
               </Col>
             </Row>
@@ -206,13 +247,13 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer, onUpdate, onDelet
               <Col span={12}>
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                  <div className="text-base">{customer.email || '-'}</div>
+                  <div className="text-base">{supplier.email || '-'}</div>
                 </div>
               </Col>
               <Col span={12}>
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                  <div className="text-base whitespace-pre-wrap">{customer.address || '-'}</div>
+                  <div className="text-base whitespace-pre-wrap">{supplier.address || '-'}</div>
                 </div>
               </Col>
             </Row>
@@ -224,13 +265,13 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer, onUpdate, onDelet
               <Col span={12}>
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Contact Name</label>
-                  <div className="text-base">{customer.contact_name || '-'}</div>
+                  <div className="text-base">{supplier.contact_name || '-'}</div>
                 </div>
               </Col>
               <Col span={12}>
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Contact Title</label>
-                  <div className="text-base">{customer.contact_title || '-'}</div>
+                  <div className="text-base">{supplier.contact_title || '-'}</div>
                 </div>
               </Col>
             </Row>
@@ -239,13 +280,13 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer, onUpdate, onDelet
               <Col span={12}>
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Contact Phone</label>
-                  <div className="text-base">{customer.contact_phone || '-'}</div>
+                  <div className="text-base">{supplier.contact_phone || '-'}</div>
                 </div>
               </Col>
               <Col span={12}>
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Contact Email</label>
-                  <div className="text-base">{customer.contact_email || '-'}</div>
+                  <div className="text-base">{supplier.contact_email || '-'}</div>
                 </div>
               </Col>
             </Row>
@@ -257,13 +298,13 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer, onUpdate, onDelet
               <Col span={12}>
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
-                  <div className="text-base">{customer.currency_name || '-'}</div>
+                  <div className="text-base">{supplier.currency_name || '-'}</div>
                 </div>
               </Col>
               <Col span={12}>
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Tax Rate (%)</label>
-                  <div className="text-base">{customer.tax_rate ? `${customer.tax_rate}%` : '-'}</div>
+                  <div className="text-base">{supplier.tax_rate ? `${supplier.tax_rate}%` : '-'}</div>
                 </div>
               </Col>
             </Row>
@@ -275,13 +316,13 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer, onUpdate, onDelet
               <Col span={12}>
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Bank Name</label>
-                  <div className="text-base">{customer.bank_name || '-'}</div>
+                  <div className="text-base">{supplier.bank_name || '-'}</div>
                 </div>
               </Col>
               <Col span={12}>
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">File Format</label>
-                  <div className="text-base">{customer.file_format || '-'}</div>
+                  <div className="text-base">{supplier.file_format || '-'}</div>
                 </div>
               </Col>
             </Row>
@@ -290,19 +331,19 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer, onUpdate, onDelet
               <Col span={8}>
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Account Number</label>
-                  <div className="text-base">{customer.account_number || '-'}</div>
+                  <div className="text-base">{supplier.account_number || '-'}</div>
                 </div>
               </Col>
               <Col span={8}>
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Institution</label>
-                  <div className="text-base">{customer.institution || '-'}</div>
+                  <div className="text-base">{supplier.institution || '-'}</div>
                 </div>
               </Col>
               <Col span={8}>
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Transit</label>
-                  <div className="text-base">{customer.transit || '-'}</div>
+                  <div className="text-base">{supplier.transit || '-'}</div>
                 </div>
               </Col>
             </Row>
@@ -321,10 +362,10 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer, onUpdate, onDelet
             <Col span={12}>
               <Form.Item
                 name="name"
-                label="Company Name"
-                rules={[{ required: true, message: 'Please enter company name' }]}
+                label="Supplier Name"
+                rules={[{ required: true, message: 'Please enter supplier name' }]}
               >
-                <Input placeholder="Enter company name" />
+                <Input placeholder="Enter supplier name" />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -375,8 +416,8 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer, onUpdate, onDelet
                 name="address"
                 label="Address"
               >
-                <TextArea 
-                  placeholder="Enter full address" 
+                <TextArea
+                  placeholder="Enter full address"
                   rows={3}
                 />
               </Form.Item>
@@ -437,7 +478,7 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer, onUpdate, onDelet
                 <Select placeholder="Select currency" allowClear>
                   {currencies.map(currency => (
                     <Option key={currency.id} value={currency.id}>
-                      {currency.currency} (Rate: {currency.rate})
+                      {currency.currency || currency.name} (Rate: {currency.rate})
                     </Option>
                   ))}
                 </Select>
@@ -448,8 +489,8 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer, onUpdate, onDelet
                 name="tax_rate"
                 label="Tax Rate (%)"
               >
-                <InputNumber 
-                  placeholder="Enter tax rate" 
+                <InputNumber
+                  placeholder="Enter tax rate"
                   min={0}
                   max={100}
                   step={0.01}
@@ -518,4 +559,4 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer, onUpdate, onDelet
   );
 };
 
-export default CustomerInfo;
+export default SupplierInfo;
