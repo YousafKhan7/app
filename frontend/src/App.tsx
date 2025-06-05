@@ -11,6 +11,7 @@ import Manufacturers from './pages/Settings/Manufacturers';
 import Users from './pages/Settings/Users';
 import Teams from './pages/Settings/Teams';
 import Warehouses from './pages/Settings/Warehouses';
+import Commissions from './pages/Settings/Commissions';
 
 function App() {
   // Configure message to appear at the top with proper styling
@@ -34,6 +35,7 @@ function App() {
             <Route path="settings/users" element={<Users />} />
             <Route path="settings/teams" element={<Teams />} />
             <Route path="settings/warehouses" element={<Warehouses />} />
+            <Route path="settings/commissions" element={<Commissions />} />
           </Route>
         </Routes>
       </Router>

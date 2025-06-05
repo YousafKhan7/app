@@ -11,7 +11,8 @@ import {
   EnvironmentOutlined,
   DollarOutlined,
   ShopOutlined,
-  DatabaseOutlined
+  DatabaseOutlined,
+  PercentageOutlined
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 
@@ -63,6 +64,11 @@ const MainLayout: React.FC = () => {
       key: '/settings/warehouses',
       icon: <DatabaseOutlined />,
       label: 'Inventory Management',
+    },
+    {
+      key: '/settings/commissions',
+      icon: <PercentageOutlined />,
+      label: 'Commissions',
     },
   ];
 

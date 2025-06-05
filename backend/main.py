@@ -141,6 +141,23 @@ class WarehouseCreate(BaseModel):
     number: str
     markup: float = 0.00
 
+class Commission(BaseModel):
+    id: int = None
+    type: str
+    percentage: float = 0.00
+    gp: bool = False
+    sales: bool = False
+    commercial_billing: bool = False
+    payment: bool = False
+
+class CommissionCreate(BaseModel):
+    type: str
+    percentage: float = 0.00
+    gp: bool = False
+    sales: bool = False
+    commercial_billing: bool = False
+    payment: bool = False
+
 # Database connection helper
 def get_db_connection():
     try:
@@ -403,6 +420,36 @@ async def delete_warehouse(warehouse_id: int):
     query = "DELETE FROM warehouses WHERE id=%s"
     execute_query(query, (warehouse_id,))
     return {"message": "Warehouse deleted successfully"}
+
+# Commissions endpoints
+@app.get("/commissions")
+async def get_commissions():
+    commissions = execute_query("SELECT * FROM commissions ORDER BY type", fetch_all=True)
+    return {"commissions": commissions}
+
+@app.post("/commissions")
+async def create_commission(commission: CommissionCreate):
+    query = """INSERT INTO commissions
+               (type, percentage, gp, sales, commercial_billing, payment)
+               VALUES (%s, %s, %s, %s, %s, %s) RETURNING id"""
+    result = execute_query(query, (commission.type, commission.percentage, commission.gp,
+                                 commission.sales, commission.commercial_billing, commission.payment), fetch_one=True)
+    return {"message": "Commission created successfully", "commission_id": result['id']}
+
+@app.put("/commissions/{commission_id}")
+async def update_commission(commission_id: int, commission: CommissionCreate):
+    query = """UPDATE commissions
+               SET type=%s, percentage=%s, gp=%s, sales=%s, commercial_billing=%s, payment=%s
+               WHERE id=%s"""
+    execute_query(query, (commission.type, commission.percentage, commission.gp,
+                         commission.sales, commission.commercial_billing, commission.payment, commission_id))
+    return {"message": "Commission updated successfully"}
+
+@app.delete("/commissions/{commission_id}")
+async def delete_commission(commission_id: int):
+    query = "DELETE FROM commissions WHERE id=%s"
+    execute_query(query, (commission_id,))
+    return {"message": "Commission deleted successfully"}
 
 # File upload endpoint
 @app.post("/upload-image")
