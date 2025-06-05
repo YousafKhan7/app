@@ -158,6 +158,110 @@ class CommissionCreate(BaseModel):
     commercial_billing: bool = False
     payment: bool = False
 
+class Customer(BaseModel):
+    id: int = None
+    name: str
+    category: str = None
+    sales_rep_id: int = None
+    phone: str = None
+    email: str = None
+    address: str = None
+    contact_name: str = None
+    contact_title: str = None
+    contact_phone: str = None
+    contact_email: str = None
+    currency_id: int = None
+    tax_rate: float = 0.00
+    bank_name: str = None
+    file_format: str = None
+    account_number: str = None
+    institution: str = None
+    transit: str = None
+
+class CustomerCreate(BaseModel):
+    name: str
+    category: str = None
+    sales_rep_id: int = None
+    phone: str = None
+    email: str = None
+    address: str = None
+    contact_name: str = None
+    contact_title: str = None
+    contact_phone: str = None
+    contact_email: str = None
+    currency_id: int = None
+    tax_rate: float = 0.00
+    bank_name: str = None
+    file_format: str = None
+    account_number: str = None
+    institution: str = None
+    transit: str = None
+
+class Quote(BaseModel):
+    id: int = None
+    job_id: str
+    name: str
+    customer_id: int = None
+    engineer_id: int = None
+    salesman_id: int = None
+    date: str
+    sell_price: float = 0.00
+    status: str = "Draft"
+
+class QuoteCreate(BaseModel):
+    job_id: str
+    name: str
+    customer_id: int = None
+    engineer_id: int = None
+    salesman_id: int = None
+    date: str
+    sell_price: float = 0.00
+    status: str = "Draft"
+
+class Project(BaseModel):
+    id: int = None
+    project_id: str
+    name: str
+    customer_id: int = None
+    engineer_id: int = None
+    end_user: str = None
+    date: str
+    salesman_id: int = None
+    status: str = "Active"
+
+class ProjectCreate(BaseModel):
+    project_id: str
+    name: str
+    customer_id: int = None
+    engineer_id: int = None
+    end_user: str = None
+    date: str
+    salesman_id: int = None
+    status: str = "Active"
+
+class CustomerAccount(BaseModel):
+    id: int = None
+    invoice_number: str
+    date: str
+    project_id: int = None
+    customer_id: int = None
+    name: str
+    amount: float = 0.00
+    outstanding: float = 0.00
+    reminder_date: str = None
+    comments: str = None
+
+class CustomerAccountCreate(BaseModel):
+    invoice_number: str
+    date: str
+    project_id: int = None
+    customer_id: int = None
+    name: str
+    amount: float = 0.00
+    outstanding: float = 0.00
+    reminder_date: str = None
+    comments: str = None
+
 # Database connection helper
 def get_db_connection():
     try:
@@ -450,6 +554,272 @@ async def delete_commission(commission_id: int):
     query = "DELETE FROM commissions WHERE id=%s"
     execute_query(query, (commission_id,))
     return {"message": "Commission deleted successfully"}
+
+# Customers endpoints
+@app.get("/customers")
+async def get_customers():
+    query = """
+    SELECT c.*, u.name as sales_rep_name, cur.currency as currency_name
+    FROM customers c
+    LEFT JOIN users u ON c.sales_rep_id = u.id
+    LEFT JOIN currencies cur ON c.currency_id = cur.id
+    ORDER BY c.name
+    """
+    customers = execute_query(query, fetch_all=True)
+    return {"customers": customers}
+
+@app.post("/customers")
+async def create_customer(customer: CustomerCreate):
+    query = """INSERT INTO customers
+               (name, category, sales_rep_id, phone, email, address, contact_name, contact_title,
+                contact_phone, contact_email, currency_id, tax_rate, bank_name, file_format,
+                account_number, institution, transit)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id"""
+    result = execute_query(query, (
+        customer.name, customer.category, customer.sales_rep_id, customer.phone, customer.email,
+        customer.address, customer.contact_name, customer.contact_title, customer.contact_phone,
+        customer.contact_email, customer.currency_id, customer.tax_rate, customer.bank_name,
+        customer.file_format, customer.account_number, customer.institution, customer.transit
+    ), fetch_one=True)
+    return {"message": "Customer created successfully", "customer_id": result['id']}
+
+@app.put("/customers/{customer_id}")
+async def update_customer(customer_id: int, customer: CustomerCreate):
+    query = """UPDATE customers
+               SET name=%s, category=%s, sales_rep_id=%s, phone=%s, email=%s, address=%s,
+                   contact_name=%s, contact_title=%s, contact_phone=%s, contact_email=%s,
+                   currency_id=%s, tax_rate=%s, bank_name=%s, file_format=%s, account_number=%s,
+                   institution=%s, transit=%s
+               WHERE id=%s"""
+    execute_query(query, (
+        customer.name, customer.category, customer.sales_rep_id, customer.phone, customer.email,
+        customer.address, customer.contact_name, customer.contact_title, customer.contact_phone,
+        customer.contact_email, customer.currency_id, customer.tax_rate, customer.bank_name,
+        customer.file_format, customer.account_number, customer.institution, customer.transit,
+        customer_id
+    ))
+    return {"message": "Customer updated successfully"}
+
+@app.delete("/customers/{customer_id}")
+async def delete_customer(customer_id: int):
+    query = "DELETE FROM customers WHERE id=%s"
+    execute_query(query, (customer_id,))
+    return {"message": "Customer deleted successfully"}
+
+# Customer Quotes endpoints
+@app.get("/customers/{customer_id}/quotes")
+async def get_customer_quotes(customer_id: int):
+    query = """
+    SELECT q.*, e.name as engineer_name, s.name as salesman_name
+    FROM quotes q
+    LEFT JOIN users e ON q.engineer_id = e.id
+    LEFT JOIN users s ON q.salesman_id = s.id
+    WHERE q.customer_id = %s
+    ORDER BY q.date DESC
+    """
+    quotes = execute_query(query, (customer_id,), fetch_all=True)
+    return {"quotes": quotes}
+
+# Projects endpoints
+@app.get("/projects")
+async def get_projects():
+    query = """
+    SELECT p.*, c.name as customer_name, e.name as engineer_name, s.name as salesman_name
+    FROM projects p
+    LEFT JOIN customers c ON p.customer_id = c.id
+    LEFT JOIN users e ON p.engineer_id = e.id
+    LEFT JOIN users s ON p.salesman_id = s.id
+    ORDER BY p.date DESC
+    """
+    projects = execute_query(query, fetch_all=True)
+    return {"projects": projects}
+
+@app.post("/projects")
+async def create_project(project: ProjectCreate):
+    query = """
+    INSERT INTO projects (project_id, name, customer_id, engineer_id, end_user, date, salesman_id, status)
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
+    """
+    result = execute_query(query, (
+        project.project_id, project.name, project.customer_id, project.engineer_id,
+        project.end_user, project.date, project.salesman_id, project.status
+    ), fetch_one=True)
+    return {"message": "Project created successfully", "project_id": result['id']}
+
+@app.put("/projects/{project_id}")
+async def update_project(project_id: int, project: ProjectCreate):
+    query = """
+    UPDATE projects SET project_id=%s, name=%s, customer_id=%s, engineer_id=%s,
+    end_user=%s, date=%s, salesman_id=%s, status=%s WHERE id=%s
+    """
+    execute_query(query, (
+        project.project_id, project.name, project.customer_id, project.engineer_id,
+        project.end_user, project.date, project.salesman_id, project.status, project_id
+    ))
+    return {"message": "Project updated successfully"}
+
+@app.delete("/projects/{project_id}")
+async def delete_project(project_id: int):
+    query = "DELETE FROM projects WHERE id=%s"
+    execute_query(query, (project_id,))
+    return {"message": "Project deleted successfully"}
+
+@app.get("/projects/{project_id}")
+async def get_project(project_id: int):
+    query = """
+    SELECT p.*, c.name as customer_name, e.name as engineer_name, s.name as salesman_name
+    FROM projects p
+    LEFT JOIN customers c ON p.customer_id = c.id
+    LEFT JOIN users e ON p.engineer_id = e.id
+    LEFT JOIN users s ON p.salesman_id = s.id
+    WHERE p.id = %s
+    """
+    project = execute_query(query, (project_id,), fetch_one=True)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return {"project": project}
+
+# Customer Projects endpoints
+@app.get("/customers/{customer_id}/projects")
+async def get_customer_projects(customer_id: int):
+    query = """
+    SELECT p.*, e.name as engineer_name, s.name as salesman_name
+    FROM projects p
+    LEFT JOIN users e ON p.engineer_id = e.id
+    LEFT JOIN users s ON p.salesman_id = s.id
+    WHERE p.customer_id = %s
+    ORDER BY p.date DESC
+    """
+    projects = execute_query(query, (customer_id,), fetch_all=True)
+    return {"projects": projects}
+
+# Accounts endpoints
+@app.get("/accounts")
+async def get_accounts():
+    query = """
+    SELECT ca.*, c.name as customer_name, p.name as project_name
+    FROM customer_accounts ca
+    LEFT JOIN customers c ON ca.customer_id = c.id
+    LEFT JOIN projects p ON ca.project_id = p.id
+    ORDER BY ca.date DESC
+    """
+    accounts = execute_query(query, fetch_all=True)
+    return {"accounts": accounts}
+
+@app.post("/accounts")
+async def create_account(account: CustomerAccountCreate):
+    query = """
+    INSERT INTO customer_accounts (invoice_number, date, project_id, customer_id, name, amount, outstanding, reminder_date, comments)
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
+    """
+    result = execute_query(query, (
+        account.invoice_number, account.date, account.project_id, account.customer_id,
+        account.name, account.amount, account.outstanding, account.reminder_date, account.comments
+    ), fetch_one=True)
+    return {"message": "Account created successfully", "account_id": result['id']}
+
+@app.put("/accounts/{account_id}")
+async def update_account(account_id: int, account: CustomerAccountCreate):
+    query = """
+    UPDATE customer_accounts SET invoice_number=%s, date=%s, project_id=%s, customer_id=%s,
+    name=%s, amount=%s, outstanding=%s, reminder_date=%s, comments=%s WHERE id=%s
+    """
+    execute_query(query, (
+        account.invoice_number, account.date, account.project_id, account.customer_id,
+        account.name, account.amount, account.outstanding, account.reminder_date, account.comments, account_id
+    ))
+    return {"message": "Account updated successfully"}
+
+@app.delete("/accounts/{account_id}")
+async def delete_account(account_id: int):
+    query = "DELETE FROM customer_accounts WHERE id=%s"
+    execute_query(query, (account_id,))
+    return {"message": "Account deleted successfully"}
+
+@app.get("/accounts/{account_id}")
+async def get_account(account_id: int):
+    query = """
+    SELECT ca.*, c.name as customer_name, p.name as project_name
+    FROM customer_accounts ca
+    LEFT JOIN customers c ON ca.customer_id = c.id
+    LEFT JOIN projects p ON ca.project_id = p.id
+    WHERE ca.id = %s
+    """
+    account = execute_query(query, (account_id,), fetch_one=True)
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+    return {"account": account}
+
+# Customer Accounts endpoints
+@app.get("/customers/{customer_id}/accounts")
+async def get_customer_accounts(customer_id: int):
+    query = """
+    SELECT ca.*, p.name as project_name
+    FROM customer_accounts ca
+    LEFT JOIN projects p ON ca.project_id = p.id
+    WHERE ca.customer_id = %s
+    ORDER BY ca.date DESC
+    """
+    accounts = execute_query(query, (customer_id,), fetch_all=True)
+    return {"accounts": accounts}
+
+# Quotes endpoints
+@app.get("/quotes")
+async def get_quotes():
+    query = """
+    SELECT q.*, c.name as customer_name, e.name as engineer_name, s.name as salesman_name
+    FROM quotes q
+    LEFT JOIN customers c ON q.customer_id = c.id
+    LEFT JOIN users e ON q.engineer_id = e.id
+    LEFT JOIN users s ON q.salesman_id = s.id
+    ORDER BY q.date DESC
+    """
+    quotes = execute_query(query, fetch_all=True)
+    return {"quotes": quotes}
+
+@app.post("/quotes")
+async def create_quote(quote: QuoteCreate):
+    query = """INSERT INTO quotes
+               (job_id, name, customer_id, engineer_id, salesman_id, date, sell_price, status)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id"""
+    result = execute_query(query, (
+        quote.job_id, quote.name, quote.customer_id, quote.engineer_id,
+        quote.salesman_id, quote.date, quote.sell_price, quote.status
+    ), fetch_one=True)
+    return {"message": "Quote created successfully", "quote_id": result['id']}
+
+@app.put("/quotes/{quote_id}")
+async def update_quote(quote_id: int, quote: QuoteCreate):
+    query = """UPDATE quotes
+               SET job_id=%s, name=%s, customer_id=%s, engineer_id=%s, salesman_id=%s,
+                   date=%s, sell_price=%s, status=%s
+               WHERE id=%s"""
+    execute_query(query, (
+        quote.job_id, quote.name, quote.customer_id, quote.engineer_id,
+        quote.salesman_id, quote.date, quote.sell_price, quote.status, quote_id
+    ))
+    return {"message": "Quote updated successfully"}
+
+@app.delete("/quotes/{quote_id}")
+async def delete_quote(quote_id: int):
+    query = "DELETE FROM quotes WHERE id=%s"
+    execute_query(query, (quote_id,))
+    return {"message": "Quote deleted successfully"}
+
+@app.get("/quotes/{quote_id}")
+async def get_quote(quote_id: int):
+    query = """
+    SELECT q.*, c.name as customer_name, e.name as engineer_name, s.name as salesman_name
+    FROM quotes q
+    LEFT JOIN customers c ON q.customer_id = c.id
+    LEFT JOIN users e ON q.engineer_id = e.id
+    LEFT JOIN users s ON q.salesman_id = s.id
+    WHERE q.id = %s
+    """
+    quote = execute_query(query, (quote_id,), fetch_one=True)
+    if not quote:
+        raise HTTPException(status_code=404, detail="Quote not found")
+    return {"quote": quote}
 
 # File upload endpoint
 @app.post("/upload-image")

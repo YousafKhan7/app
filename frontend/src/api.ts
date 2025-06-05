@@ -186,6 +186,101 @@ export interface CommissionCreate {
   payment: boolean;
 }
 
+export interface Customer {
+  id: number;
+  name: string;
+  category?: string;
+  sales_rep_id?: number;
+  phone?: string;
+  email?: string;
+  address?: string;
+  contact_name?: string;
+  contact_title?: string;
+  contact_phone?: string;
+  contact_email?: string;
+  currency_id?: number;
+  tax_rate: number;
+  bank_name?: string;
+  file_format?: string;
+  account_number?: string;
+  institution?: string;
+  transit?: string;
+  sales_rep_name?: string;
+  currency_name?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CustomerCreate {
+  name: string;
+  category?: string;
+  sales_rep_id?: number;
+  phone?: string;
+  email?: string;
+  address?: string;
+  contact_name?: string;
+  contact_title?: string;
+  contact_phone?: string;
+  contact_email?: string;
+  currency_id?: number;
+  tax_rate: number;
+  bank_name?: string;
+  file_format?: string;
+  account_number?: string;
+  institution?: string;
+  transit?: string;
+}
+
+export interface Quote {
+  id: number;
+  job_id: string;
+  name: string;
+  customer_id?: number;
+  engineer_id?: number;
+  salesman_id?: number;
+  date: string;
+  sell_price: number;
+  status: string;
+  customer_name?: string;
+  engineer_name?: string;
+  salesman_name?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Project {
+  id: number;
+  project_id: string;
+  name: string;
+  customer_id?: number;
+  engineer_id?: number;
+  end_user?: string;
+  date: string;
+  salesman_id?: number;
+  status: string;
+  engineer_name?: string;
+  salesman_name?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CustomerAccount {
+  id: number;
+  invoice_number: string;
+  date: string;
+  project_id?: number;
+  customer_id?: number;
+  name: string;
+  amount: number;
+  outstanding: number;
+  reminder_date?: string;
+  comments?: string;
+  project_name?: string;
+  customer_name?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export const apiService = {
   // Health check
   healthCheck: async () => {
@@ -402,6 +497,123 @@ export const apiService = {
   deleteCommission: async (id: number): Promise<any> => {
     const response = await api.delete(`/commissions/${id}`);
     return response.data;
+  },
+
+  // Customers
+  getCustomers: async (): Promise<Customer[]> => {
+    const response = await api.get('/customers');
+    return response.data.customers;
+  },
+
+  createCustomer: async (customer: CustomerCreate): Promise<any> => {
+    const response = await api.post('/customers', customer);
+    return response.data;
+  },
+
+  updateCustomer: async (id: number, customer: CustomerCreate): Promise<any> => {
+    const response = await api.put(`/customers/${id}`, customer);
+    return response.data;
+  },
+
+  deleteCustomer: async (id: number): Promise<any> => {
+    const response = await api.delete(`/customers/${id}`);
+    return response.data;
+  },
+
+  // Customer Quotes
+  getCustomerQuotes: async (customerId: number): Promise<Quote[]> => {
+    const response = await api.get(`/customers/${customerId}/quotes`);
+    return response.data.quotes;
+  },
+
+  // Customer Projects
+  getCustomerProjects: async (customerId: number): Promise<Project[]> => {
+    const response = await api.get(`/customers/${customerId}/projects`);
+    return response.data.projects;
+  },
+
+  // Customer Accounts
+  getCustomerAccounts: async (customerId: number): Promise<CustomerAccount[]> => {
+    const response = await api.get(`/customers/${customerId}/accounts`);
+    return response.data.accounts;
+  },
+
+  // Quotes
+  getQuotes: async (): Promise<Quote[]> => {
+    const response = await api.get('/quotes');
+    return response.data.quotes;
+  },
+
+  createQuote: async (quote: Omit<Quote, 'id' | 'customer_name' | 'engineer_name' | 'salesman_name' | 'created_at' | 'updated_at'>): Promise<any> => {
+    const response = await api.post('/quotes', quote);
+    return response.data;
+  },
+
+  updateQuote: async (id: number, quote: Omit<Quote, 'id' | 'customer_name' | 'engineer_name' | 'salesman_name' | 'created_at' | 'updated_at'>): Promise<any> => {
+    const response = await api.put(`/quotes/${id}`, quote);
+    return response.data;
+  },
+
+  deleteQuote: async (id: number): Promise<any> => {
+    const response = await api.delete(`/quotes/${id}`);
+    return response.data;
+  },
+
+  getQuote: async (id: number): Promise<Quote> => {
+    const response = await api.get(`/quotes/${id}`);
+    return response.data.quote;
+  },
+
+  // Projects
+  getProjects: async (): Promise<Project[]> => {
+    const response = await api.get('/projects');
+    return response.data.projects;
+  },
+
+  createProject: async (project: Omit<Project, 'id' | 'customer_name' | 'engineer_name' | 'salesman_name' | 'created_at' | 'updated_at'>): Promise<any> => {
+    const response = await api.post('/projects', project);
+    return response.data;
+  },
+
+  updateProject: async (id: number, project: Omit<Project, 'id' | 'customer_name' | 'engineer_name' | 'salesman_name' | 'created_at' | 'updated_at'>): Promise<any> => {
+    const response = await api.put(`/projects/${id}`, project);
+    return response.data;
+  },
+
+  deleteProject: async (id: number): Promise<any> => {
+    const response = await api.delete(`/projects/${id}`);
+    return response.data;
+  },
+
+  getProject: async (id: number): Promise<Project> => {
+    const response = await api.get(`/projects/${id}`);
+    return response.data.project;
+  },
+
+  // Accounts
+  getAccounts: async (): Promise<CustomerAccount[]> => {
+    const response = await api.get('/accounts');
+    return response.data.accounts;
+  },
+
+  createAccount: async (account: Omit<CustomerAccount, 'id' | 'customer_name' | 'project_name' | 'created_at' | 'updated_at'>): Promise<any> => {
+    const response = await api.post('/accounts', account);
+    return response.data;
+  },
+
+  updateAccount: async (id: number, account: Omit<CustomerAccount, 'id' | 'customer_name' | 'project_name' | 'created_at' | 'updated_at'>): Promise<any> => {
+    const response = await api.put(`/accounts/${id}`, account);
+    return response.data;
+  },
+
+  deleteAccount: async (id: number): Promise<any> => {
+    const response = await api.delete(`/accounts/${id}`);
+    return response.data;
+  },
+
+  getAccount: async (id: number): Promise<CustomerAccount> => {
+    const response = await api.get(`/accounts/${id}`);
+    return response.data.account;
   },
 };
 

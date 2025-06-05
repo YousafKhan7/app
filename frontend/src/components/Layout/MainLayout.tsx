@@ -12,7 +12,10 @@ import {
   DollarOutlined,
   ShopOutlined,
   DatabaseOutlined,
-  PercentageOutlined
+  PercentageOutlined,
+  ContactsOutlined,
+  FileTextOutlined,
+  ProjectOutlined
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 
@@ -77,6 +80,26 @@ const MainLayout: React.FC = () => {
       key: '/',
       icon: <HomeOutlined />,
       label: 'Dashboard',
+    },
+    {
+      key: '/customers',
+      icon: <ContactsOutlined />,
+      label: 'Customers',
+    },
+    {
+      key: '/quotes',
+      icon: <FileTextOutlined />,
+      label: 'Quotes',
+    },
+    {
+      key: '/projects',
+      icon: <ProjectOutlined />,
+      label: 'Projects',
+    },
+    {
+      key: '/accounts',
+      icon: <DollarOutlined />,
+      label: 'Accounts',
     },
     {
       key: 'settings',

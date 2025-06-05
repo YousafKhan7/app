@@ -12,6 +12,10 @@ import Users from './pages/Settings/Users';
 import Teams from './pages/Settings/Teams';
 import Warehouses from './pages/Settings/Warehouses';
 import Commissions from './pages/Settings/Commissions';
+import Customers from './pages/Customers/Customers';
+import Quotes from './pages/Quotes/Quotes';
+import Projects from './pages/Projects/Projects';
+import Accounts from './pages/Accounts/Accounts';
 
 function App() {
   // Configure message to appear at the top with proper styling
@@ -27,6 +31,10 @@ function App() {
         <Routes>
           <Route path="/" element={<MainLayout />}>
             <Route index element={<Dashboard />} />
+            <Route path="customers" element={<Customers />} />
+            <Route path="quotes" element={<Quotes />} />
+            <Route path="projects" element={<Projects />} />
+            <Route path="accounts" element={<Accounts />} />
             <Route path="settings/chart-of-accounts" element={<ChartOfAccounts />} />
             <Route path="settings/departments" element={<Departments />} />
             <Route path="settings/locations" element={<Locations />} />
