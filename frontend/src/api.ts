@@ -165,6 +165,27 @@ export interface WarehouseCreate {
   markup: number;
 }
 
+export interface Commission {
+  id: number;
+  type: string;
+  percentage: number;
+  gp: boolean;
+  sales: boolean;
+  commercial_billing: boolean;
+  payment: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CommissionCreate {
+  type: string;
+  percentage: number;
+  gp: boolean;
+  sales: boolean;
+  commercial_billing: boolean;
+  payment: boolean;
+}
+
 export const apiService = {
   // Health check
   healthCheck: async () => {
@@ -359,6 +380,27 @@ export const apiService = {
 
   deleteWarehouse: async (id: number): Promise<any> => {
     const response = await api.delete(`/warehouses/${id}`);
+    return response.data;
+  },
+
+  // Commissions
+  getCommissions: async (): Promise<Commission[]> => {
+    const response = await api.get('/commissions');
+    return response.data.commissions;
+  },
+
+  createCommission: async (commission: CommissionCreate): Promise<any> => {
+    const response = await api.post('/commissions', commission);
+    return response.data;
+  },
+
+  updateCommission: async (id: number, commission: CommissionCreate): Promise<any> => {
+    const response = await api.put(`/commissions/${id}`, commission);
+    return response.data;
+  },
+
+  deleteCommission: async (id: number): Promise<any> => {
+    const response = await api.delete(`/commissions/${id}`);
     return response.data;
   },
 };

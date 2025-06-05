@@ -100,6 +100,19 @@ CREATE TABLE IF NOT EXISTS warehouses (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Commissions table
+CREATE TABLE IF NOT EXISTS commissions (
+    id SERIAL PRIMARY KEY,
+    type VARCHAR(50) NOT NULL,
+    percentage DECIMAL(5, 2) NOT NULL DEFAULT 0.00,
+    gp BOOLEAN DEFAULT FALSE,
+    sales BOOLEAN DEFAULT FALSE,
+    commercial_billing BOOLEAN DEFAULT FALSE,
+    payment BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create triggers for updated_at columns
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_currencies_updated_at BEFORE UPDATE ON currencies FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -110,6 +123,7 @@ CREATE TRIGGER update_locations_updated_at BEFORE UPDATE ON locations FOR EACH R
 CREATE TRIGGER update_manufacturers_updated_at BEFORE UPDATE ON manufacturers FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_teams_updated_at BEFORE UPDATE ON teams FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_warehouses_updated_at BEFORE UPDATE ON warehouses FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_commissions_updated_at BEFORE UPDATE ON commissions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Insert sample data (PostgreSQL version)
 INSERT INTO users (name, email) VALUES
@@ -170,3 +184,9 @@ INSERT INTO warehouses (warehouse_name, number, markup) VALUES
 ('Secondary Warehouse', 'WH002', 12.50),
 ('Distribution Center', 'WH003', 10.00)
 ON CONFLICT (number) DO UPDATE SET warehouse_name = EXCLUDED.warehouse_name, markup = EXCLUDED.markup;
+
+INSERT INTO commissions (type, percentage, gp, sales, commercial_billing, payment) VALUES
+('Level A', 10.00, TRUE, TRUE, FALSE, FALSE),
+('Level B', 12.00, TRUE, FALSE, TRUE, FALSE),
+('Level C', 15.00, FALSE, TRUE, TRUE, FALSE),
+('Level D', 20.00, TRUE, TRUE, TRUE, TRUE);

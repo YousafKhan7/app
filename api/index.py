@@ -1,6 +1,5 @@
 from fastapi import FastAPI, HTTPException, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -10,18 +9,10 @@ import shutil
 from pathlib import Path
 from dotenv import load_dotenv
 
-
 # Load environment variables
 load_dotenv()
 
 app = FastAPI(title="Full Stack App API", version="1.0.0")
-
-# Create uploads directory if it doesn't exist
-uploads_dir = Path("uploads")
-uploads_dir.mkdir(exist_ok=True)
-
-# Mount static files
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # Configure CORS
 app.add_middleware(
@@ -451,7 +442,7 @@ async def delete_commission(commission_id: int):
     execute_query(query, (commission_id,))
     return {"message": "Commission deleted successfully"}
 
-# File upload endpoint
+# File upload endpoint (simplified for Vercel)
 @app.post("/upload-image")
 async def upload_image(file: UploadFile = File(...)):
     try:
@@ -459,20 +450,20 @@ async def upload_image(file: UploadFile = File(...)):
         if not file.content_type.startswith('image/'):
             raise HTTPException(status_code=400, detail="File must be an image")
 
-        # Generate unique filename
+        # For Vercel, we'll return a placeholder since file storage is limited
+        # In production, you'd want to use a service like AWS S3, Cloudinary, etc.
         import uuid
-        file_extension = file.filename.split('.')[-1]
+        file_extension = file.filename.split('.')[-1] if '.' in file.filename else 'jpg'
         unique_filename = f"{uuid.uuid4()}.{file_extension}"
-        file_path = uploads_dir / unique_filename
 
-        # Save file
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-
-        return {"filename": unique_filename, "url": f"/uploads/{unique_filename}"}
+        # Return a placeholder response
+        return {
+            "filename": unique_filename,
+            "url": f"/uploads/{unique_filename}",
+            "message": "File upload simulated - integrate with cloud storage for production"
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"File upload failed: {str(e)}")
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+# Vercel handler
+handler = app
