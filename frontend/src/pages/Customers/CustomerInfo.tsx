@@ -18,7 +18,7 @@ import { EditOutlined, SaveOutlined, CloseOutlined, DeleteOutlined } from '@ant-
 import { apiService } from '../../api';
 import type { Customer, CustomerCreate, User, Currency } from '../../api';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
-import ErrorToast from '../../components/ErrorDisplay/ErrorToast';
+import FormErrorDisplay from '../../components/FormErrorDisplay';
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -64,10 +64,10 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer, onUpdate, onDelet
         apiService.getUsers(),
         apiService.getCurrencies()
       ]);
-      setUsers(usersData);
+      setUsers(usersData as any);
       setCurrencies(currenciesData);
     } catch (error: any) {
-      showError(error.message || 'Failed to fetch dropdown data');
+      showError(error);
     }
   };
 
@@ -88,12 +88,20 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer, onUpdate, onDelet
   const handleSave = async (values: CustomerCreate) => {
     setLoading(true);
     try {
-      await apiService.updateCustomer(customer.id, values);
+      // Transform form values to ensure proper data types
+      const transformedValues = {
+        ...values,
+        sales_rep_id: values.sales_rep_id || null,
+        currency_id: values.currency_id || null,
+        tax_rate: values.tax_rate || 0
+      };
+
+      await apiService.updateCustomer(customer.id, transformedValues);
       setEditing(false);
       onUpdate(); // Refresh customer data
       message.success('Customer updated successfully');
     } catch (error: any) {
-      showError(error.message || 'Failed to update customer');
+      showError(error);
     } finally {
       setLoading(false);
     }
@@ -108,7 +116,7 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer, onUpdate, onDelet
         onDelete();
       }
     } catch (error: any) {
-      showError(error.message || 'Failed to delete customer');
+      showError(error);
     } finally {
       setLoading(false);
     }
@@ -163,9 +171,6 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer, onUpdate, onDelet
           </Space>
         )}
       </div>
-
-      {/* Error Display */}
-      <ErrorToast message={errorMessage} onClose={clearError} />
 
       {!editing ? (
         // Read-only view
@@ -315,6 +320,8 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer, onUpdate, onDelet
           layout="vertical"
           onFinish={handleSave}
         >
+          {/* Error Display */}
+          <FormErrorDisplay error={errorMessage} onClose={clearError} />
         {/* Basic Information */}
         <Card title="Basic Information" className="mb-6">
           <Row gutter={16}>

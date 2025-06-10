@@ -13,6 +13,10 @@ import {
 import { apiService } from '../../api';
 import type { Customer, CustomerCreate, User, Currency } from '../../api';
 
+import FormErrorDisplay from '../../components/FormErrorDisplay';
+import FieldHelp from '../../components/FieldHelp';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
+
 const { Option } = Select;
 const { TextArea } = Input;
 
@@ -32,6 +36,9 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   const [users, setUsers] = useState<User[]>([]);
   const [currencies, setCurrencies] = useState<Currency[]>([]);
 
+  // Use error handler for form-level errors
+  const { errorMessage, showError, clearError } = useErrorHandler();
+
   // File format options
   const fileFormatOptions = [
     { value: 'CSV', label: 'CSV' },
@@ -43,43 +50,47 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
 
   useEffect(() => {
     if (visible) {
-      fetchDropdownData();
+      fetchUsers();
+      fetchCurrencies();
       form.resetFields();
     }
   }, [visible, form]);
 
-  const fetchDropdownData = async () => {
+  const fetchUsers = async () => {
     try {
-      const [usersData, currenciesData] = await Promise.all([
-        apiService.getUsers(),
-        apiService.getCurrencies()
-      ]);
-      setUsers(usersData);
-      setCurrencies(currenciesData);
+      const userData = await apiService.getUsers();
+      setUsers(userData as User[]);
     } catch (error: any) {
-      message.error('Failed to fetch dropdown data');
+      showError(error);
+    }
+  };
+
+  const fetchCurrencies = async () => {
+    try {
+      const currencyData = await apiService.getCurrencies();
+      setCurrencies(currencyData);
+    } catch (error: any) {
+      showError(error);
     }
   };
 
   const handleSubmit = async (values: CustomerCreate) => {
     setLoading(true);
     try {
-      const response = await apiService.createCustomer(values);
+      // Transform form values to ensure proper data types
+      const transformedValues = {
+        ...values,
+        sales_rep_id: values.sales_rep_id || null,
+        currency_id: values.currency_id || null,
+        tax_rate: values.tax_rate || 0
+      };
+
+      const response = await apiService.createCustomer(transformedValues);
       message.success('Customer created successfully');
-      
-      // Fetch the created customer to get the full data with joined fields
-      const customers = await apiService.getCustomers();
-      const newCustomer = customers.find(c => c.id === response.customer_id);
-      
-      if (newCustomer) {
-        onSuccess(newCustomer);
-      } else {
-        onCancel();
-      }
-      
       form.resetFields();
+      onSuccess(response.customer);
     } catch (error: any) {
-      message.error(error.message || 'Failed to create customer');
+      showError(error);
     } finally {
       setLoading(false);
     }
@@ -87,11 +98,13 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
 
   const handleCancel = () => {
     form.resetFields();
+    clearError();
     onCancel();
   };
 
   return (
-    <Modal
+    <>
+      <Modal
       title="Add New Customer"
       open={visible}
       onCancel={handleCancel}
@@ -117,17 +130,21 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
         onFinish={handleSubmit}
         initialValues={{ tax_rate: 0 }}
       >
+        {/* Error Display */}
+        <FormErrorDisplay error={errorMessage} onClose={clearError} />
+
         {/* Basic Information */}
         <div className="mb-6">
           <h3 className="text-lg font-medium mb-4">Basic Information</h3>
           <Row gutter={16}>
             <Col span={12}>
+              <FieldHelp type="name" />
               <Form.Item
                 name="name"
                 label="Company Name"
                 rules={[{ required: true, message: 'Please enter company name' }]}
               >
-                <Input placeholder="Enter company name" />
+                <Input placeholder="e.g., ABC Manufacturing Inc." />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -154,32 +171,35 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
               </Form.Item>
             </Col>
             <Col span={12}>
+              <FieldHelp type="phone" />
               <Form.Item
                 name="phone"
                 label="Phone"
               >
-                <Input placeholder="Enter phone number" />
+                <Input placeholder="e.g., (555) 123-4567" />
               </Form.Item>
             </Col>
           </Row>
 
           <Row gutter={16}>
             <Col span={12}>
+              <FieldHelp type="email" />
               <Form.Item
                 name="email"
                 label="Email"
                 rules={[{ type: 'email', message: 'Please enter a valid email' }]}
               >
-                <Input placeholder="Enter email address" />
+                <Input placeholder="e.g., contact@company.com" />
               </Form.Item>
             </Col>
             <Col span={12}>
+              <FieldHelp type="address" />
               <Form.Item
                 name="address"
                 label="Address"
               >
-                <TextArea 
-                  placeholder="Enter full address" 
+                <TextArea
+                  placeholder="e.g., 123 Main St, Toronto, ON M5V 3A8"
                   rows={3}
                 />
               </Form.Item>
@@ -192,11 +212,12 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           <h3 className="text-lg font-medium mb-4">Contact Information</h3>
           <Row gutter={16}>
             <Col span={12}>
+              <FieldHelp type="name" />
               <Form.Item
                 name="contact_name"
                 label="Contact Name"
               >
-                <Input placeholder="Enter contact person name" />
+                <Input placeholder="e.g., John Smith" />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -211,20 +232,22 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
 
           <Row gutter={16}>
             <Col span={12}>
+              <FieldHelp type="phone" />
               <Form.Item
                 name="contact_phone"
                 label="Contact Phone"
               >
-                <Input placeholder="Enter contact phone number" />
+                <Input placeholder="e.g., (555) 987-6543" />
               </Form.Item>
             </Col>
             <Col span={12}>
+              <FieldHelp type="email" />
               <Form.Item
                 name="contact_email"
                 label="Contact Email"
                 rules={[{ type: 'email', message: 'Please enter a valid email' }]}
               >
-                <Input placeholder="Enter contact email address" />
+                <Input placeholder="e.g., john@company.com" />
               </Form.Item>
             </Col>
           </Row>
@@ -235,6 +258,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           <h3 className="text-lg font-medium mb-4">Financial Information</h3>
           <Row gutter={16}>
             <Col span={12}>
+              <FieldHelp type="currency" />
               <Form.Item
                 name="currency_id"
                 label="Currency"
@@ -249,12 +273,14 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
               </Form.Item>
             </Col>
             <Col span={12}>
+              <FieldHelp type="taxRate" />
               <Form.Item
                 name="tax_rate"
                 label="Tax Rate (%)"
+                rules={[{ required: true, message: 'Please enter tax rate' }]}
               >
-                <InputNumber 
-                  placeholder="Enter tax rate" 
+                <InputNumber
+                  placeholder="e.g., 13.5"
                   min={0}
                   max={100}
                   step={0.01}
@@ -293,11 +319,12 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
 
           <Row gutter={16}>
             <Col span={8}>
+              <FieldHelp type="accountNumber" />
               <Form.Item
                 name="account_number"
                 label="Account Number"
               >
-                <Input placeholder="Enter account number" />
+                <Input placeholder="e.g., ACC12345" />
               </Form.Item>
             </Col>
             <Col span={8}>
@@ -319,7 +346,8 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           </Row>
         </div>
       </Form>
-    </Modal>
+      </Modal>
+    </>
   );
 };
 

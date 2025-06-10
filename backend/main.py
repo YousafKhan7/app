@@ -1,14 +1,17 @@
-from fastapi import FastAPI, HTTPException, File, UploadFile
+from fastapi import FastAPI, HTTPException, File, UploadFile, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
-import psycopg2
-from psycopg2.extras import RealDictCursor
-from psycopg2 import Error
+from pydantic import BaseModel, Field, field_validator
+import re
 import os
 import shutil
 from pathlib import Path
 from dotenv import load_dotenv
+from database import execute_query, health_check, cleanup_database
+import atexit
+import json
+from datetime import datetime
+from typing import List
 
 
 # Load environment variables
@@ -36,24 +39,53 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Database configuration for PostgreSQL/Supabase
-DB_CONFIG = {
-    'host': os.getenv('DB_HOST', 'localhost'),
-    'database': os.getenv('DB_NAME', 'postgres'),
-    'user': os.getenv('DB_USER', 'postgres'),
-    'password': os.getenv('DB_PASSWORD', ''),
-    'port': int(os.getenv('DB_PORT', 5432))
-}
+# Register cleanup function for application shutdown
+atexit.register(cleanup_database)
+
+# WebSocket connection manager
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def send_personal_message(self, message: str, websocket: WebSocket):
+        await websocket.send_text(message)
+
+    async def broadcast(self, message: str):
+        for connection in self.active_connections:
+            try:
+                await connection.send_text(message)
+            except:
+                # Remove dead connections
+                self.active_connections.remove(connection)
+
+    async def broadcast_event(self, event_type: str, data: dict):
+        message = {
+            "type": event_type,
+            "data": data,
+            "timestamp": datetime.now().isoformat()
+        }
+        await self.broadcast(json.dumps(message))
+
+manager = ConnectionManager()
 
 # Pydantic models
 class User(BaseModel):
     id: int = None
     name: str
     email: str
+    active: bool = True
 
 class UserCreate(BaseModel):
     name: str
     email: str
+    active: bool = True
 
 class AccountType(BaseModel):
     id: int = None
@@ -183,7 +215,7 @@ class Customer(BaseModel):
     transit: str = None
 
 class CustomerCreate(BaseModel):
-    name: str
+    name: str = Field(..., min_length=2, max_length=200)
     category: str = None
     sales_rep_id: int = None
     phone: str = None
@@ -194,12 +226,42 @@ class CustomerCreate(BaseModel):
     contact_phone: str = None
     contact_email: str = None
     currency_id: int = None
-    tax_rate: float = 0.00
+    tax_rate: float = Field(default=0.00, ge=0, le=100)
     bank_name: str = None
     file_format: str = None
     account_number: str = None
     institution: str = None
     transit: str = None
+
+    @field_validator('email', 'contact_email')
+    @classmethod
+    def validate_email(cls, v):
+        if v and v.strip():
+            email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+            if not re.match(email_pattern, v):
+                raise ValueError('Invalid email format')
+        return v
+
+    @field_validator('phone', 'contact_phone')
+    @classmethod
+    def validate_phone(cls, v):
+        if v and v.strip():
+            # Remove all non-digit characters
+            cleaned = re.sub(r'\D', '', v)
+            if len(cleaned) < 7 or len(cleaned) > 15:
+                raise ValueError('Phone number must be 7-15 digits')
+        return v
+
+    @field_validator('name', 'contact_name')
+    @classmethod
+    def validate_name(cls, v):
+        if v and v.strip():
+            if len(v.strip()) < 2:
+                raise ValueError('Name must be at least 2 characters long')
+            # Allow letters, spaces, hyphens, apostrophes, and periods
+            if not re.match(r"^[a-zA-Z\s\-'\.]+$", v.strip()):
+                raise ValueError('Name contains invalid characters')
+        return v
 
 class Supplier(BaseModel):
     id: int = None
@@ -222,7 +284,7 @@ class Supplier(BaseModel):
     transit: str = None
 
 class SupplierCreate(BaseModel):
-    name: str
+    name: str = Field(..., min_length=2, max_length=200)
     category: str = None
     sales_rep_id: int = None
     phone: str = None
@@ -233,12 +295,42 @@ class SupplierCreate(BaseModel):
     contact_phone: str = None
     contact_email: str = None
     currency_id: int = None
-    tax_rate: float = 0.00
+    tax_rate: float = Field(default=0.00, ge=0, le=100)
     bank_name: str = None
     file_format: str = None
     account_number: str = None
     institution: str = None
     transit: str = None
+
+    @field_validator('email', 'contact_email')
+    @classmethod
+    def validate_email(cls, v):
+        if v and v.strip():
+            email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+            if not re.match(email_pattern, v):
+                raise ValueError('Invalid email format')
+        return v
+
+    @field_validator('phone', 'contact_phone')
+    @classmethod
+    def validate_phone(cls, v):
+        if v and v.strip():
+            # Remove all non-digit characters
+            cleaned = re.sub(r'\D', '', v)
+            if len(cleaned) < 7 or len(cleaned) > 15:
+                raise ValueError('Phone number must be 7-15 digits')
+        return v
+
+    @field_validator('name', 'contact_name')
+    @classmethod
+    def validate_name(cls, v):
+        if v and v.strip():
+            if len(v.strip()) < 2:
+                raise ValueError('Name must be at least 2 characters long')
+            # Allow letters, spaces, hyphens, apostrophes, and periods
+            if not re.match(r"^[a-zA-Z\s\-'\.]+$", v.strip()):
+                raise ValueError('Name contains invalid characters')
+        return v
 
 class Quote(BaseModel):
     id: int = None
@@ -305,81 +397,98 @@ class CustomerAccountCreate(BaseModel):
     reminder_date: str = None
     comments: str = None
 
-# Database connection helper
-def get_db_connection():
-    try:
-        connection = psycopg2.connect(**DB_CONFIG)
-        return connection
-    except Error as e:
-        print(f"Error connecting to PostgreSQL: {e}")
-        return None
-
-# Helper function to execute queries with proper cursor
-def execute_query(query, params=None, fetch_one=False, fetch_all=False):
-    try:
-        connection = get_db_connection()
-        if not connection:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-        
-        cursor = connection.cursor(cursor_factory=RealDictCursor)
-        cursor.execute(query, params)
-        
-        result = None
-        if fetch_one:
-            result = cursor.fetchone()
-        elif fetch_all:
-            result = cursor.fetchall()
-        
-        connection.commit()
-        cursor.close()
-        connection.close()
-        
-        return result
-    except Error as e:
-        if connection:
-            connection.rollback()
-            connection.close()
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
-
 # API Routes
 @app.get("/")
 async def root():
     return {"message": "Welcome to Full Stack App API"}
 
 @app.get("/health")
-async def health_check():
+async def health_check_endpoint():
+    return health_check()
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
     try:
-        connection = get_db_connection()
-        if connection and not connection.closed:
-            connection.close()
-            return {"status": "healthy", "database": "connected"}
-        else:
-            return {"status": "unhealthy", "database": "disconnected"}
-    except Exception as e:
-        return {"status": "unhealthy", "error": str(e)}
+        while True:
+            data = await websocket.receive_text()
+            # Echo back for now - can be extended for client messages
+            await manager.send_personal_message(f"Message received: {data}", websocket)
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
 
 # Users endpoints
 @app.get("/users")
-async def get_users():
-    users = execute_query("SELECT * FROM users", fetch_all=True)
-    return {"users": users}
+async def get_users(
+    page: int = Query(1, ge=1, description="Page number"),
+    limit: int = Query(10, ge=1, le=100, description="Items per page"),
+    search: str = Query(None, description="Search by name or email")
+):
+    offset = (page - 1) * limit
+
+    # Build query with optional search
+    base_query = "SELECT * FROM users"
+    count_query = "SELECT COUNT(*) as total FROM users"
+    params = []
+
+    if search:
+        search_condition = " WHERE name ILIKE %s OR email ILIKE %s"
+        search_param = f"%{search}%"
+        base_query += search_condition
+        count_query += search_condition
+        params = [search_param, search_param]
+
+    # Get total count
+    total_result = execute_query(count_query, params, fetch_one=True)
+    total = total_result['total'] if total_result else 0
+
+    # Get paginated results
+    paginated_query = f"{base_query} ORDER BY name LIMIT %s OFFSET %s"
+    users = execute_query(paginated_query, params + [limit, offset], fetch_all=True)
+
+    return {
+        "users": users,
+        "pagination": {
+            "page": page,
+            "limit": limit,
+            "total": total,
+            "pages": (total + limit - 1) // limit
+        }
+    }
+
+@app.get("/users/active-count")
+async def get_active_users_count():
+    result = execute_query("SELECT COUNT(*) as count FROM users WHERE active = TRUE", fetch_one=True)
+    return {"active_users_count": result['count']}
 
 @app.post("/users")
 async def create_user(user: UserCreate):
-    query = "INSERT INTO users (name, email) VALUES (%s, %s) RETURNING id"
-    result = execute_query(query, (user.name, user.email), fetch_one=True)
+    query = "INSERT INTO users (name, email, active) VALUES (%s, %s, %s) RETURNING id"
+    result = execute_query(query, (user.name, user.email, user.active), fetch_one=True)
+
+    # Broadcast the event
+    await manager.broadcast_event("user_created", {"id": result['id'], **user.model_dump()})
+
     return {"message": "User created successfully", "user_id": result['id']}
 
 @app.put("/users/{user_id}")
 async def update_user(user_id: int, user: UserCreate):
-    query = "UPDATE users SET name=%s, email=%s WHERE id=%s"
-    execute_query(query, (user.name, user.email, user_id))
+    query = "UPDATE users SET name=%s, email=%s, active=%s WHERE id=%s"
+    execute_query(query, (user.name, user.email, user.active, user_id))
+
+    # Broadcast the event
+    await manager.broadcast_event("user_updated", {"id": user_id, **user.model_dump()})
+
     return {"message": "User updated successfully"}
 
 @app.delete("/users/{user_id}")
 async def delete_user(user_id: int):
     query = "DELETE FROM users WHERE id=%s"
     execute_query(query, (user_id,))
+
+    # Broadcast the event
+    await manager.broadcast_event("user_deleted", {"id": user_id})
+
     return {"message": "User deleted successfully"}
 
 # Account Types endpoints
@@ -605,16 +714,48 @@ async def delete_commission(commission_id: int):
 
 # Customers endpoints
 @app.get("/customers")
-async def get_customers():
-    query = """
+async def get_customers(
+    page: int = Query(1, ge=1, description="Page number"),
+    limit: int = Query(10, ge=1, le=100, description="Items per page"),
+    search: str = Query(None, description="Search by name, email, or category")
+):
+    offset = (page - 1) * limit
+
+    # Build base queries
+    base_query = """
     SELECT c.*, u.name as sales_rep_name, cur.currency as currency_name
     FROM customers c
     LEFT JOIN users u ON c.sales_rep_id = u.id
     LEFT JOIN currencies cur ON c.currency_id = cur.id
-    ORDER BY c.name
     """
-    customers = execute_query(query, fetch_all=True)
-    return {"customers": customers}
+
+    count_query = "SELECT COUNT(*) as total FROM customers c"
+    params = []
+
+    if search:
+        search_condition = " WHERE c.name ILIKE %s OR c.email ILIKE %s OR c.category ILIKE %s"
+        search_param = f"%{search}%"
+        base_query += search_condition
+        count_query += search_condition
+        params = [search_param, search_param, search_param]
+
+    # Get total count
+    total_result = execute_query(count_query, params, fetch_one=True)
+    total = total_result['total'] if total_result else 0
+
+    # Get paginated results
+    paginated_query = f"{base_query} ORDER BY c.name LIMIT %s OFFSET %s"
+    customers = execute_query(paginated_query, params + [limit, offset], fetch_all=True)
+
+    return {
+        "customers": customers,
+        "pagination": {
+            "page": page,
+            "limit": limit,
+            "total": total,
+            "pages": (total + limit - 1) // limit
+        }
+    }
 
 @app.post("/customers")
 async def create_customer(customer: CustomerCreate):

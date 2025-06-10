@@ -18,7 +18,7 @@ import { EditOutlined, SaveOutlined, CloseOutlined, DeleteOutlined } from '@ant-
 import { apiService } from '../../api';
 import type { Supplier, SupplierCreate, User, Currency } from '../../api';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
-import ErrorToast from '../../components/ErrorDisplay/ErrorToast';
+import FormErrorDisplay from '../../components/FormErrorDisplay';
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -84,7 +84,7 @@ const SupplierInfo: React.FC<SupplierInfoProps> = ({ supplier, onUpdate, onDelet
       const userData = await apiService.getUsers();
       setUsers(userData);
     } catch (error: any) {
-      showError(error.message || 'Failed to fetch users');
+      showError(error);
     }
   };
 
@@ -93,7 +93,7 @@ const SupplierInfo: React.FC<SupplierInfoProps> = ({ supplier, onUpdate, onDelet
       const currencyData = await apiService.getCurrencies();
       setCurrencies(currencyData);
     } catch (error: any) {
-      showError(error.message || 'Failed to fetch currencies');
+      showError(error);
     }
   };
 
@@ -129,12 +129,20 @@ const SupplierInfo: React.FC<SupplierInfoProps> = ({ supplier, onUpdate, onDelet
   const handleSave = async (values: SupplierCreate) => {
     setLoading(true);
     try {
-      await apiService.updateSupplier(supplier.id, values);
+      // Transform form values to ensure proper data types
+      const transformedValues = {
+        ...values,
+        sales_rep_id: values.sales_rep_id || null,
+        currency_id: values.currency_id || null,
+        tax_rate: values.tax_rate || 0
+      };
+
+      await apiService.updateSupplier(supplier.id, transformedValues);
       setEditing(false);
       onUpdate(); // Refresh supplier data
       message.success('Supplier updated successfully');
     } catch (error: any) {
-      showError(error.message || 'Failed to update supplier');
+      showError(error);
     } finally {
       setLoading(false);
     }
@@ -149,7 +157,7 @@ const SupplierInfo: React.FC<SupplierInfoProps> = ({ supplier, onUpdate, onDelet
         onDelete();
       }
     } catch (error: any) {
-      showError(error.message || 'Failed to delete supplier');
+      showError(error);
     } finally {
       setLoading(false);
     }
@@ -157,8 +165,6 @@ const SupplierInfo: React.FC<SupplierInfoProps> = ({ supplier, onUpdate, onDelet
 
   return (
     <div>
-      {/* Error Display */}
-      <ErrorToast message={errorMessage} onClose={clearError} />
 
       <div className="flex justify-between items-center mb-6">
         <Title level={4}>Supplier Information</Title>
@@ -356,6 +362,8 @@ const SupplierInfo: React.FC<SupplierInfoProps> = ({ supplier, onUpdate, onDelet
           layout="vertical"
           onFinish={handleSave}
         >
+          {/* Error Display */}
+          <FormErrorDisplay error={errorMessage} onClose={clearError} />
         {/* Basic Information */}
         <Card title="Basic Information" className="mb-6">
           <Row gutter={16}>

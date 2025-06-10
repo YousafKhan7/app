@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { withRetry } from './utils/retryUtils';
 
 // Determine API base URL based on environment
 const API_BASE_URL = import.meta.env.PROD
@@ -17,20 +18,35 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     // Log the full error for debugging
-    console.log('API Error:', error);
-    console.log('Error Response:', error.response);
-    console.log('Error Response Data:', error.response?.data);
+    console.error('API Error:', error);
+    console.error('Error Response:', error.response);
+    console.error('Error Response Data:', error.response?.data);
 
-    // Extract error message from response
-    const errorMessage = error.response?.data?.detail ||
-                        error.response?.data?.message ||
-                        error.message ||
-                        'An unexpected error occurred';
+    // Categorize error types
+    let errorCategory = 'unknown';
+    let shouldRetry = false;
 
-    console.log('Extracted Error Message:', errorMessage);
+    if (error.code === 'NETWORK_ERROR' || error.message === 'Network Error') {
+      errorCategory = 'network';
+      shouldRetry = true;
+    } else if (error.response?.status >= 500) {
+      errorCategory = 'server';
+      shouldRetry = true;
+    } else if (error.response?.status >= 400) {
+      errorCategory = 'client';
+      shouldRetry = false;
+    }
 
-    // Throw a new error with the extracted message
-    throw new Error(errorMessage);
+    console.error('Error Category:', errorCategory);
+
+    // Preserve the original error structure for validation error parsing
+    // Add error metadata to the original error object
+    (error as any).category = errorCategory;
+    (error as any).shouldRetry = shouldRetry;
+    (error as any).status = error.response?.status;
+
+    // Throw the original error to preserve the response structure
+    throw error;
   }
 );
 
@@ -38,6 +54,7 @@ export interface User {
   id: number;
   name: string;
   email: string;
+  active: boolean;
   created_at?: string;
   updated_at?: string;
 }
@@ -45,6 +62,7 @@ export interface User {
 export interface UserCreate {
   name: string;
   email: string;
+  active: boolean;
 }
 
 export interface AccountType {
@@ -346,9 +364,28 @@ export const apiService = {
   },
 
   // Users
-  getUsers: async (): Promise<User[]> => {
-    const response = await api.get('/users');
-    return response.data.users;
+  getUsers: async (params?: PaginationParams): Promise<User[] | PaginatedResponse<User>> => {
+    return withRetry(async () => {
+      const response = await api.get('/users', { params });
+
+      // If pagination params provided, return paginated response
+      if (params && (params.page || params.limit || params.search)) {
+        return {
+          data: response.data.users,
+          pagination: response.data.pagination
+        };
+      }
+
+      // Otherwise return just the users array for backward compatibility
+      return response.data.users;
+    });
+  },
+
+  getActiveUsersCount: async (): Promise<number> => {
+    return withRetry(async () => {
+      const response = await api.get('/users/active-count');
+      return response.data.active_users_count;
+    });
   },
 
   createUser: async (user: UserCreate): Promise<any> => {
@@ -682,5 +719,22 @@ export const apiService = {
     return response.data.account;
   },
 };
+
+// Pagination interfaces
+export interface PaginationParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
 
 export default api;

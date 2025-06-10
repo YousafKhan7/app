@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Layout, Menu, Button, Typography } from 'antd';
+import React, { useState, Suspense } from 'react';
+import { Layout, Menu, Button, Typography, Spin } from 'antd';
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -24,8 +24,24 @@ const { Title } = Typography;
 
 const MainLayout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Handle responsive behavior
+  React.useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (mobile) {
+        setCollapsed(true);
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const settingsMenuItems = [
     {
@@ -122,12 +138,17 @@ const MainLayout: React.FC = () => {
 
   return (
     <Layout className="min-h-screen">
-      <Sider 
-        trigger={null} 
-        collapsible 
+      <Sider
+        trigger={null}
+        collapsible
         collapsed={collapsed}
         width={250}
-        className="bg-white shadow-lg"
+        collapsedWidth={isMobile ? 0 : 80}
+        className="bg-white shadow-lg transition-all duration-300"
+        breakpoint="lg"
+        onBreakpoint={(broken) => {
+          setCollapsed(broken);
+        }}
       >
         <div className="p-4 border-b">
           <Title level={4} className="m-0 text-center">
@@ -155,7 +176,13 @@ const MainLayout: React.FC = () => {
         </Header>
         
         <Content className="p-6 bg-gray-50">
-          <Outlet />
+          <Suspense fallback={
+            <div className="flex justify-center items-center h-64">
+              <Spin size="large" />
+            </div>
+          }>
+            <Outlet />
+          </Suspense>
         </Content>
       </Layout>
     </Layout>

@@ -11,6 +11,8 @@
     "vercel-build": "npm run build"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.80.6",
+    "@tanstack/react-query-devtools": "^5.80.6",
     "antd": "^5.22.6",
     "axios": "^1.7.9",
     "dayjs": "^1.11.13",

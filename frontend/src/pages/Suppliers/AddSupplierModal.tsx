@@ -12,8 +12,9 @@ import {
 } from 'antd';
 import { apiService } from '../../api';
 import type { Supplier, SupplierCreate, User, Currency } from '../../api';
+import FormErrorDisplay from '../../components/FormErrorDisplay';
+import FieldHelp from '../../components/FieldHelp';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
-import ErrorToast from '../../components/ErrorDisplay/ErrorToast';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -60,7 +61,7 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({
       const userData = await apiService.getUsers();
       setUsers(userData);
     } catch (error: any) {
-      showError(error.message || 'Failed to fetch users');
+      showError(error);
     }
   };
 
@@ -69,19 +70,27 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({
       const currencyData = await apiService.getCurrencies();
       setCurrencies(currencyData);
     } catch (error: any) {
-      showError(error.message || 'Failed to fetch currencies');
+      showError(error);
     }
   };
 
   const handleSubmit = async (values: SupplierCreate) => {
     setLoading(true);
     try {
-      const response = await apiService.createSupplier(values);
+      // Transform form values to ensure proper data types
+      const transformedValues = {
+        ...values,
+        sales_rep_id: values.sales_rep_id || null,
+        currency_id: values.currency_id || null,
+        tax_rate: values.tax_rate || 0
+      };
+
+      const response = await apiService.createSupplier(transformedValues);
       message.success('Supplier created successfully');
       form.resetFields();
       onSuccess(response.supplier);
     } catch (error: any) {
-      showError(error.message || 'Failed to create supplier');
+      showError(error);
     } finally {
       setLoading(false);
     }
@@ -116,7 +125,7 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({
         destroyOnClose
       >
         {/* Error Display */}
-        <ErrorToast message={errorMessage} onClose={clearError} />
+        <FormErrorDisplay error={errorMessage} onClose={clearError} />
 
         <Form
           form={form}
@@ -128,12 +137,13 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({
         >
           <Row gutter={16}>
             <Col span={12}>
+              <FieldHelp type="name" />
               <Form.Item
                 label="Supplier Name"
                 name="name"
                 rules={[{ required: true, message: 'Please enter supplier name' }]}
               >
-                <Input placeholder="Enter supplier name" />
+                <Input placeholder="e.g., ABC Supplies Inc." />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -162,23 +172,25 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({
               </Form.Item>
             </Col>
             <Col span={12}>
+              <FieldHelp type="phone" />
               <Form.Item
                 label="Phone"
                 name="phone"
               >
-                <Input placeholder="Enter phone number" />
+                <Input placeholder="e.g., (555) 123-4567" />
               </Form.Item>
             </Col>
           </Row>
 
           <Row gutter={16}>
             <Col span={12}>
+              <FieldHelp type="email" />
               <Form.Item
                 label="Email"
                 name="email"
                 rules={[{ type: 'email', message: 'Please enter a valid email' }]}
               >
-                <Input placeholder="Enter email address" />
+                <Input placeholder="e.g., contact@supplier.com" />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -246,6 +258,7 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({
               </Form.Item>
             </Col>
             <Col span={12}>
+              <FieldHelp type="taxRate" />
               <Form.Item
                 label="Tax Rate (%)"
                 name="tax_rate"
@@ -255,7 +268,7 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({
                   min={0}
                   max={100}
                   step={0.01}
-                  placeholder="Enter tax rate"
+                  placeholder="e.g., 13.5"
                   style={{ width: '100%' }}
                 />
               </Form.Item>
