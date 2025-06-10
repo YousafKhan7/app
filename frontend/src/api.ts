@@ -3,7 +3,7 @@ import { withRetry } from './utils/retryUtils';
 
 // Determine API base URL based on environment
 const API_BASE_URL = import.meta.env.PROD
-  ? '/api'  // Production: use relative path for Vercel
+  ? ''  // Production: use relative path without /api prefix
   : 'http://localhost:8000';  // Development: use localhost
 
 const api = axios.create({

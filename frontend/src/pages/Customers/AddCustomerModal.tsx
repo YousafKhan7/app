@@ -77,13 +77,29 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   const handleSubmit = async (values: CustomerCreate) => {
     setLoading(true);
     try {
-      // Transform form values to ensure proper data types
-      const transformedValues = {
-        ...values,
-        sales_rep_id: values.sales_rep_id || null,
-        currency_id: values.currency_id || null,
-        tax_rate: values.tax_rate || 0
-      };
+      // Transform form values to ensure proper data types and remove undefined values
+      const transformedValues: any = {};
+
+      // Always include required fields
+      transformedValues.name = values.name;
+      transformedValues.tax_rate = values.tax_rate || 0;
+
+      // Only include optional fields if they have values
+      if (values.category) transformedValues.category = values.category;
+      if (values.sales_rep_id) transformedValues.sales_rep_id = values.sales_rep_id;
+      if (values.phone) transformedValues.phone = values.phone;
+      if (values.email) transformedValues.email = values.email;
+      if (values.address) transformedValues.address = values.address;
+      if (values.contact_name) transformedValues.contact_name = values.contact_name;
+      if (values.contact_title) transformedValues.contact_title = values.contact_title;
+      if (values.contact_phone) transformedValues.contact_phone = values.contact_phone;
+      if (values.contact_email) transformedValues.contact_email = values.contact_email;
+      if (values.currency_id) transformedValues.currency_id = values.currency_id;
+      if (values.bank_name) transformedValues.bank_name = values.bank_name;
+      if (values.file_format) transformedValues.file_format = values.file_format;
+      if (values.account_number) transformedValues.account_number = values.account_number;
+      if (values.institution) transformedValues.institution = values.institution;
+      if (values.transit) transformedValues.transit = values.transit;
 
       const response = await apiService.createCustomer(transformedValues);
       message.success('Customer created successfully');
