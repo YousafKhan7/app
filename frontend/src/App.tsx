@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ConfigProvider, message, Spin } from 'antd';
 import MainLayout from './components/Layout/MainLayout';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -21,13 +21,6 @@ const Quotes = React.lazy(() => import('./pages/Quotes/Quotes'));
 const Projects = React.lazy(() => import('./pages/Projects/Projects'));
 const Accounts = React.lazy(() => import('./pages/Accounts/Accounts'));
 
-// Loading component
-const PageLoader = () => (
-  <div className="flex justify-center items-center h-64">
-    <Spin size="large" />
-  </div>
-);
-
 function App() {
   // Configure message to appear at the top with proper styling
   message.config({
@@ -48,6 +41,7 @@ function App() {
               <Route path="quotes" element={<Quotes />} />
               <Route path="projects" element={<Projects />} />
               <Route path="accounts" element={<Accounts />} />
+              <Route path="settings" element={<Navigate to="/settings/users" replace />} />
               <Route path="settings/chart-of-accounts" element={<ChartOfAccounts />} />
               <Route path="settings/departments" element={<Departments />} />
               <Route path="settings/locations" element={<Locations />} />

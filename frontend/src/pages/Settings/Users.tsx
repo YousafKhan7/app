@@ -7,51 +7,99 @@ import {
   Form,
   Input,
   Space,
-  Typography,
-  Popconfirm,
   Switch,
   Tag,
-  message
+  message,
+  Tabs
 } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { EditOutlined, SearchOutlined, DownloadOutlined, FilterOutlined } from '@ant-design/icons';
 import type { User, UserCreate } from '../../api';
-import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '../../hooks/useApiQueries';
+import { useUsers, useCreateUser, useUpdateUser } from '../../hooks/useApiQueries';
 import FormErrorDisplay from '../../components/FormErrorDisplay';
-import FieldHelp from '../../components/FieldHelp';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
 
-const { Title } = Typography;
+const { TabPane } = Tabs;
 
 const Users: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<User | null>(null);
   const [form] = Form.useForm();
+  const [searchText, setSearchText] = useState('');
+  const [activeTab, setActiveTab] = useState('active');
 
   // React Query hooks
   const { data = [], isLoading } = useUsers();
   const createUserMutation = useCreateUser();
   const updateUserMutation = useUpdateUser();
-  const deleteUserMutation = useDeleteUser();
 
   // Error handler for form-level errors
   const { errorMessage, showError, clearError } = useErrorHandler();
 
+  // Filter users based on active status and search text
+  const filteredUsers = data.filter((user: User) => {
+    let matchesActiveStatus = true;
+    
+    if (activeTab === 'active') {
+      matchesActiveStatus = !!user.active;
+    } else if (activeTab === 'inactive') {
+      matchesActiveStatus = !user.active;
+    }
+    // For 'all' tab, we don't filter by active status
+    
+    const matchesSearch = searchText === '' || 
+      user.name?.toLowerCase().includes(searchText.toLowerCase()) || 
+      user.email?.toLowerCase().includes(searchText.toLowerCase());
+    
+    return matchesActiveStatus && matchesSearch;
+  });
+
   const columns = [
     {
-      title: 'ID',
-      dataIndex: 'id',
-      key: 'id',
-      width: 80,
-    },
-    {
-      title: 'Name',
+      title: 'First Name',
       dataIndex: 'name',
       key: 'name',
+      render: (name: string) => {
+        const nameParts = name ? name.split(' ') : [''];
+        return nameParts[0];
+      }
+    },
+    {
+      title: 'Last Name',
+      dataIndex: 'name',
+      key: 'lastName',
+      render: (name: string) => {
+        const nameParts = name ? name.split(' ') : ['', ''];
+        return nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+      }
+    },
+    {
+      title: 'Work Phone',
+      dataIndex: 'phone',
+      key: 'phone',
+      render: (phone: string) => phone || '-'
+    },
+    {
+      title: 'Cell Phone',
+      dataIndex: 'cellPhone',
+      key: 'cellPhone',
+      render: (cellPhone: string) => cellPhone || '-'
     },
     {
       title: 'Email',
       dataIndex: 'email',
       key: 'email',
+    },
+    {
+      title: 'No. of Cards',
+      dataIndex: 'cardCount',
+      key: 'cardCount',
+      render: () => 0
+    },
+    {
+      title: 'No. of Proxies',
+      dataIndex: 'proxyCount',
+      key: 'proxyCount',
+      render: () => 0
     },
     {
       title: 'Status',
@@ -64,37 +112,16 @@ const Users: React.FC = () => {
       ),
     },
     {
-      title: 'Created At',
-      dataIndex: 'created_at',
-      key: 'created_at',
-      render: (date: string) => date ? new Date(date).toLocaleDateString() : '-',
-    },
-    {
-      title: 'Actions',
+      title: 'Details',
       key: 'actions',
-      width: 120,
+      width: 80,
       render: (_: any, record: User) => (
-        <Space>
-          <Button
-            type="text"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-            size="small"
-          />
-          <Popconfirm
-            title="Are you sure you want to delete this user?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Yes"
-            cancelText="No"
-          >
-            <Button
-              type="text"
-              icon={<DeleteOutlined />}
-              danger
-              size="small"
-            />
-          </Popconfirm>
-        </Space>
+        <Button
+          type="link"
+          icon={<EditOutlined />}
+          onClick={() => handleEdit(record)}
+          size="small"
+        />
       ),
     },
   ];
@@ -111,15 +138,6 @@ const Users: React.FC = () => {
     form.setFieldsValue(record);
     clearError(); // Clear any previous errors
     setModalVisible(true);
-  };
-
-  const handleDelete = async (id: number) => {
-    try {
-      await deleteUserMutation.mutateAsync(id);
-      message.success('User deleted successfully');
-    } catch (error: any) {
-      showError(error.message || 'Failed to delete user');
-    }
   };
 
   const handleSubmit = async (values: UserCreate) => {
@@ -141,38 +159,80 @@ const Users: React.FC = () => {
     }
   };
 
+  const handleSearch = (value: string) => {
+    setSearchText(value);
+  };
+
+  const handleTabChange = (key: string) => {
+    setActiveTab(key);
+    setSearchText('');
+  };
+
   return (
     <div role="main" aria-label="Users Management">
-      <div className="flex justify-between items-center mb-6">
-        <Title level={2} id="users-heading">Users</Title>
-        <Button
-          type="primary"
-          icon={<PlusOutlined aria-hidden="true" />}
-          onClick={handleAdd}
-          aria-label="Add new user"
-        >
-          Add User
-        </Button>
-      </div>
+      <div className="mb-6">
+        <Card className="mb-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+            <div className="w-full md:w-2/3 mb-4 md:mb-0">
+              <Input
+                placeholder="Search by first name, last name or email"
+                prefix={<SearchOutlined />}
+                onChange={(e) => handleSearch(e.target.value)}
+                value={searchText}
+                className="w-full"
+                allowClear
+              />
+            </div>
+            <div className="flex items-center">
+              <Button
+                type="primary"
+                icon={<FilterOutlined />}
+                className="mr-2"
+              >
+                Search
+              </Button>
+            </div>
+          </div>
+          
+          <Tabs activeKey={activeTab} onChange={handleTabChange}>
+            <TabPane tab="Active users" key="active" />
+            <TabPane tab="Inactive users" key="inactive" />
+            <TabPane tab="All" key="all" />
+          </Tabs>
+          
+          <div className="flex justify-between items-center mb-4">
+            <Button 
+              type="primary"
+              onClick={handleAdd}
+            >
+              New user
+            </Button>
+            <Button 
+              icon={<DownloadOutlined />}
+            >
+              Download
+            </Button>
+          </div>
 
-      <Card role="region" aria-labelledby="users-heading">
-        <Table
-          columns={columns}
-          dataSource={data}
-          rowKey="id"
-          loading={isLoading || createUserMutation.isPending || updateUserMutation.isPending || deleteUserMutation.isPending}
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showQuickJumper: true,
-          }}
-          aria-label="Users table"
-          aria-describedby="users-table-description"
-        />
-        <div id="users-table-description" className="sr-only">
-          Table containing user information with options to edit or delete each user
-        </div>
-      </Card>
+          <Table
+            columns={columns}
+            dataSource={filteredUsers}
+            rowKey="id"
+            loading={isLoading || createUserMutation.isPending || updateUserMutation.isPending}
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: true,
+              showQuickJumper: true,
+              position: ['bottomRight'],
+              showTotal: (total) => `${total} items`,
+              showLessItems: true,
+            }}
+            aria-label="Users table"
+            aria-describedby="users-table-description"
+            size="middle"
+          />
+        </Card>
+      </div>
 
       <Modal
         title={editingRecord ? 'Edit User' : 'Add User'}
@@ -194,7 +254,6 @@ const Users: React.FC = () => {
           {/* Error Display */}
           <FormErrorDisplay error={errorMessage} onClose={clearError} />
 
-          <FieldHelp type="name" />
           <Form.Item
             name="name"
             label="Name"
@@ -203,7 +262,20 @@ const Users: React.FC = () => {
             <Input placeholder="e.g., John Smith" />
           </Form.Item>
 
-          <FieldHelp type="email" />
+          <Form.Item
+            name="phone"
+            label="Work Phone"
+          >
+            <Input placeholder="e.g., 9058457558" />
+          </Form.Item>
+
+          <Form.Item
+            name="cellPhone"
+            label="Cell Phone"
+          >
+            <Input placeholder="e.g., 9058457558" />
+          </Form.Item>
+
           <Form.Item
             name="email"
             label="Email"
