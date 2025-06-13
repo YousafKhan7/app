@@ -59,7 +59,7 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({
   const fetchUsers = async () => {
     try {
       const userData = await apiService.getUsers();
-      setUsers(userData);
+      setUsers(userData as User[]);
     } catch (error: any) {
       showError(error);
     }
@@ -267,7 +267,7 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({
                 <Select placeholder="Select currency" allowClear>
                   {currencies.map(currency => (
                     <Option key={currency.id} value={currency.id}>
-                      {currency.name} ({currency.code})
+                      {currency.currency} (Rate: {currency.rate})
                     </Option>
                   ))}
                 </Select>

@@ -3,9 +3,9 @@
  * Consistent styling with hover effects and accessibility
  */
 import React from 'react';
-import { Card as AntCard, CardProps } from 'antd';
+import { Card as AntCard, type CardProps } from 'antd';
 
-interface ProfessionalCardProps extends CardProps {
+interface ProfessionalCardProps extends Omit<CardProps, 'variant'> {
   variant?: 'default' | 'elevated' | 'outlined';
   interactive?: boolean;
   loading?: boolean;
