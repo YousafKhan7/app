@@ -79,7 +79,7 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
   const fetchUsers = async () => {
     try {
       const usersData = await apiService.getUsers();
-      setUsers(usersData);
+      setUsers(usersData as User[]);
     } catch (error: any) {
       showError(error.message || 'Failed to fetch users');
     }

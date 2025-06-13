@@ -1,8 +1,8 @@
 /**
  * Reusable paginated table component with search functionality
  */
-import React, { useState } from 'react';
-import { Table, Input, Space, Card } from 'antd';
+import  { useState } from 'react';
+import { Table, Input, Card } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import type { TableProps } from 'antd';
 

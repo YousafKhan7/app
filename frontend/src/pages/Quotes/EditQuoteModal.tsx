@@ -67,7 +67,7 @@ const EditQuoteModal: React.FC<EditQuoteModalProps> = ({
         apiService.getUsers()
       ]);
       setCustomers(customersData);
-      setUsers(usersData);
+      setUsers(usersData as User[]);
     } catch (error: any) {
       message.error('Failed to fetch dropdown data');
     }
@@ -249,7 +249,10 @@ const EditQuoteModal: React.FC<EditQuoteModalProps> = ({
                   step={0.01}
                   style={{ width: '100%' }}
                   formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={value => value!.replace(/\$\s?|(,*)/g, '')}
+                  parser={(value: string | undefined): number => {
+                    const parsed = value ? parseFloat(value.replace(/\$\s?|,/g, '')) : 0;
+                    return isNaN(parsed) ? 0 : parsed;
+                  }}
                 />
               </Form.Item>
             </Col>

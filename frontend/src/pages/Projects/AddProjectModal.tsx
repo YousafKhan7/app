@@ -76,7 +76,7 @@ const AddProjectModal: React.FC<AddProjectModalProps> = ({
   const fetchEngineers = async () => {
     try {
       const engineersData = await apiService.getUsers();
-      setEngineers(engineersData);
+      setEngineers(engineersData as User[]);
     } catch (error: any) {
       showError(error.message || 'Failed to fetch engineers');
     }
@@ -85,7 +85,7 @@ const AddProjectModal: React.FC<AddProjectModalProps> = ({
   const fetchSalesmen = async () => {
     try {
       const salesmenData = await apiService.getUsers();
-      setSalesmen(salesmenData);
+      setSalesmen(salesmenData as User[]);
     } catch (error: any) {
       showError(error.message || 'Failed to fetch salesmen');
     }

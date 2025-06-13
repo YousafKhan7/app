@@ -1,7 +1,7 @@
 /**
  * Error Boundary component to catch and handle React errors gracefully
  */
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Result, Button } from 'antd';
 
 interface Props {

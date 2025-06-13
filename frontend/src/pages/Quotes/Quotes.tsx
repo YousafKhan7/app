@@ -10,8 +10,7 @@ import {
   Col,
   Card,
   Typography,
-  Spin,
-  Modal,
+  
   message,
   Input,
   Popconfirm
@@ -294,7 +293,7 @@ const Quotes: React.FC = () => {
               </label>
               <RangePicker
                 value={dateRange}
-                onChange={setDateRange}
+                onChange={(dates) => setDateRange(dates as [dayjs.Dayjs, dayjs.Dayjs] | null)}
                 style={{ width: '100%' }}
                 placeholder={['Start Date', 'End Date']}
               />
