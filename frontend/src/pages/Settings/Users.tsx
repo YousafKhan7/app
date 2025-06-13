@@ -10,9 +10,10 @@ import {
   Switch,
   Tag,
   message,
-  Tabs
+  Tabs,
+  Popconfirm
 } from 'antd';
-import { EditOutlined, SearchOutlined, DownloadOutlined, FilterOutlined } from '@ant-design/icons';
+import { EditOutlined, SearchOutlined, DownloadOutlined, FilterOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { User, UserCreate } from '../../api';
 import { useUsers, useCreateUser, useUpdateUser } from '../../hooks/useApiQueries';
 import FormErrorDisplay from '../../components/FormErrorDisplay';
@@ -114,14 +115,29 @@ const Users: React.FC = () => {
     {
       title: 'Details',
       key: 'actions',
-      width: 80,
+      width: 120,
       render: (_: any, record: User) => (
-        <Button
-          type="link"
-          icon={<EditOutlined />}
-          onClick={() => handleEdit(record)}
-          size="small"
-        />
+        <Space>
+          <Button
+            type="link"
+            icon={<EditOutlined />}
+            onClick={() => handleEdit(record)}
+            size="small"
+          />
+          <Popconfirm
+            title="Are you sure you want to delete this user?"
+            onConfirm={() => handleDelete(record.id)}
+            okText="Yes"
+            cancelText="No"
+          >
+            <Button
+              type="text"
+              icon={<DeleteOutlined />}
+              size="small"
+              danger
+            />
+          </Popconfirm>
+        </Space>
       ),
     },
   ];
@@ -168,6 +184,16 @@ const Users: React.FC = () => {
     setSearchText('');
   };
 
+  const handleDelete = async (id: number) => {
+    try {
+      // You may want to add a check to prevent deleting yourself or super admin
+      await updateUserMutation.mutateAsync({ id, user: { active: false } });
+      message.success('User deleted successfully');
+    } catch (error: any) {
+      showError(error.message || 'Failed to delete user');
+    }
+  };
+
   return (
     <div role="main" aria-label="Users Management">
       <div className="mb-6">
@@ -206,11 +232,6 @@ const Users: React.FC = () => {
               onClick={handleAdd}
             >
               New user
-            </Button>
-            <Button 
-              icon={<DownloadOutlined />}
-            >
-              Download
             </Button>
           </div>
 

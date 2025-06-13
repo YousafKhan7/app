@@ -12,8 +12,6 @@ import {
   DatabaseOutlined,
   PercentageOutlined,
   ContactsOutlined,
-  FileTextOutlined,
-  ProjectOutlined,
   MailOutlined
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';

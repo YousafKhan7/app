@@ -9,13 +9,10 @@ import {
   Col,
   Card,
   Typography,
-  Tooltip,
-  Modal,
   message,
   Popconfirm
 } from 'antd';
 import {
-  EyeOutlined,
   EditOutlined,
   FilterOutlined,
   DeleteOutlined,

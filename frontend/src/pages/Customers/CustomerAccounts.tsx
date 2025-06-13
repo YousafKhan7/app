@@ -9,20 +9,19 @@ import {
   Col,
   Card,
   Typography,
-
+  Popconfirm,
+  message,
   Tooltip,
-  Modal,
-  message
 } from 'antd';
 import {
-  EyeOutlined,
   EditOutlined,
   FilterOutlined,
   DollarOutlined,
   BellOutlined,
   CheckCircleOutlined,
   ExclamationCircleOutlined,
-  PlusOutlined
+  PlusOutlined,
+  DeleteOutlined
 } from '@ant-design/icons';
 import { apiService } from '../../api';
 import type { CustomerAccount } from '../../api';
@@ -160,16 +159,23 @@ const CustomerAccounts: React.FC<CustomerAccountsProps> = ({ customerId }) => {
         <Space>
           <Button
             type="text"
-            icon={<EyeOutlined />}
-            size="small"
-            onClick={() => handleView(record)}
-          />
-          <Button
-            type="text"
             icon={<EditOutlined />}
             size="small"
             onClick={() => handleEdit(record)}
           />
+          <Popconfirm
+            title="Are you sure you want to delete this account?"
+            onConfirm={() => handleDelete(record.id!)}
+            okText="Yes"
+            cancelText="No"
+          >
+            <Button
+              type="text"
+              icon={<DeleteOutlined />}
+              size="small"
+              danger
+            />
+          </Popconfirm>
         </Space>
       ),
     },
@@ -221,30 +227,6 @@ const CustomerAccounts: React.FC<CustomerAccountsProps> = ({ customerId }) => {
     setShowEditModal(true);
   };
 
-  const handleView = (account: CustomerAccount) => {
-    const { status, color } = getPaymentStatus(account.outstanding);
-    Modal.info({
-      title: 'Invoice Details',
-      width: 600,
-      content: (
-        <div className="space-y-4">
-          <div><strong>Invoice Number:</strong> {account.invoice_number}</div>
-          <div><strong>Date:</strong> {dayjs(account.date).format('MMMM DD, YYYY')}</div>
-          <div><strong>Project:</strong> {account.project_name || '-'}</div>
-          <div><strong>Name:</strong> {account.name}</div>
-          <div><strong>Amount:</strong> ${account.amount.toLocaleString()}</div>
-          <div><strong>Outstanding:</strong> ${account.outstanding.toLocaleString()}</div>
-          <div><strong>Payment Status:</strong> <Tag color={color}>{status}</Tag></div>
-          {account.reminder_date && (
-            <div><strong>Reminder Date:</strong> {dayjs(account.reminder_date).format('MMMM DD, YYYY')}</div>
-          )}
-          {account.comments && (
-            <div><strong>Comments:</strong> {account.comments}</div>
-          )}
-        </div>
-      ),
-    });
-  };
 
   const handleAddSuccess = () => {
     setShowAddModal(false);
@@ -263,11 +245,21 @@ const CustomerAccounts: React.FC<CustomerAccountsProps> = ({ customerId }) => {
     setDateRange(null);
   };
 
-  const handleDateRangeChange = (dates: any, dateStrings: [string, string]) => {
+  const handleDateRangeChange = (dates: any) => {
     if (dates) {
       setDateRange([dates[0], dates[1]]);
     } else {
       setDateRange(null);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    try {
+      await apiService.deleteAccount(id);
+      message.success('Account deleted successfully');
+      fetchAccounts();
+    } catch (error: any) {
+      showError(error.message || 'Failed to delete account');
     }
   };
 

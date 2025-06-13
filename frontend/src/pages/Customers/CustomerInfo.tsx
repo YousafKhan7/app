@@ -9,7 +9,6 @@ import {
   Select,
   InputNumber,
   Space,
-  Divider,
   Typography,
   Popconfirm,
   message
@@ -96,7 +95,7 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer, onUpdate, onDelet
         tax_rate: values.tax_rate || 0
       };
 
-      await apiService.updateCustomer(customer.id, transformedValues);
+      await apiService.updateCustomer(customer.id, transformedValues as CustomerCreate);
       setEditing(false);
       onUpdate(); // Refresh customer data
       message.success('Customer updated successfully');

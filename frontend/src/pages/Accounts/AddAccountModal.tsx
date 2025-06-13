@@ -213,7 +213,10 @@ const AddAccountModal: React.FC<AddAccountModalProps> = ({
             step={0.01}
             precision={2}
             formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-            parser={value => (value ? value.replace(/\$\s?|,/g, '') : '')}
+            parser={(value: string | undefined): number => {
+              const parsed = value ? parseFloat(value.replace(/\$\s?|,/g, '')) : 0;
+              return isNaN(parsed) ? 0 : parsed;
+            }}
             placeholder="Enter amount"
           />
         </Form.Item>
@@ -229,7 +232,10 @@ const AddAccountModal: React.FC<AddAccountModalProps> = ({
             step={0.01}
             precision={2}
             formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-            parser={value => (value ? value.replace(/\$\s?|,/g, '') : '')}
+            parser={(value: string | undefined): number => {
+              const parsed = value ? parseFloat(value.replace(/\$\s?|,/g, '')) : 0;
+              return isNaN(parsed) ? 0 : parsed;
+            }}
             placeholder="Enter outstanding amount"
           />
         </Form.Item>
