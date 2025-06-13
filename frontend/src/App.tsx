@@ -17,8 +17,6 @@ const Warehouses = React.lazy(() => import('./pages/Settings/Warehouses'));
 const Commissions = React.lazy(() => import('./pages/Settings/Commissions'));
 const Customers = React.lazy(() => import('./pages/Customers/Customers'));
 const Suppliers = React.lazy(() => import('./pages/Suppliers/Suppliers'));
-const Quotes = React.lazy(() => import('./pages/Quotes/Quotes'));
-const Projects = React.lazy(() => import('./pages/Projects/Projects'));
 const Accounts = React.lazy(() => import('./pages/Accounts/Accounts'));
 
 function App() {
@@ -38,8 +36,6 @@ function App() {
               <Route index element={<Dashboard />} />
               <Route path="customers" element={<Customers />} />
               <Route path="suppliers" element={<Suppliers />} />
-              <Route path="quotes" element={<Quotes />} />
-              <Route path="projects" element={<Projects />} />
               <Route path="accounts" element={<Accounts />} />
               <Route path="settings" element={<Navigate to="/settings/users" replace />} />
               <Route path="settings/chart-of-accounts" element={<ChartOfAccounts />} />

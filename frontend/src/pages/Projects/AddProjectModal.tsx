@@ -21,17 +21,20 @@ interface AddProjectModalProps {
   visible: boolean;
   onCancel: () => void;
   onSuccess: () => void;
+  initialCustomerId?: number;
 }
 
 const AddProjectModal: React.FC<AddProjectModalProps> = ({
   visible,
   onCancel,
   onSuccess,
+  initialCustomerId,
 }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
+  const [engineers, setEngineers] = useState<User[]>([]);
+  const [salesmen, setSalesmen] = useState<User[]>([]);
 
   // Use our custom error handler hook
   const { errorMessage, showError, clearError } = useErrorHandler();
@@ -48,10 +51,18 @@ const AddProjectModal: React.FC<AddProjectModalProps> = ({
   useEffect(() => {
     if (visible) {
       fetchCustomers();
-      fetchUsers();
+      fetchEngineers();
+      fetchSalesmen();
       clearError();
+      
+      // Set initial customer if provided
+      if (initialCustomerId) {
+        form.setFieldsValue({
+          customer_id: initialCustomerId
+        });
+      }
     }
-  }, [visible]);
+  }, [visible, initialCustomerId]);
 
   const fetchCustomers = async () => {
     try {
@@ -62,12 +73,21 @@ const AddProjectModal: React.FC<AddProjectModalProps> = ({
     }
   };
 
-  const fetchUsers = async () => {
+  const fetchEngineers = async () => {
     try {
-      const usersData = await apiService.getUsers();
-      setUsers(usersData);
+      const engineersData = await apiService.getUsers();
+      setEngineers(engineersData);
     } catch (error: any) {
-      showError(error.message || 'Failed to fetch users');
+      showError(error.message || 'Failed to fetch engineers');
+    }
+  };
+
+  const fetchSalesmen = async () => {
+    try {
+      const salesmenData = await apiService.getUsers();
+      setSalesmen(salesmenData);
+    } catch (error: any) {
+      showError(error.message || 'Failed to fetch salesmen');
     }
   };
 
@@ -121,7 +141,23 @@ const AddProjectModal: React.FC<AddProjectModalProps> = ({
           label="Project ID"
           rules={[{ required: true, message: 'Please enter project ID' }]}
         >
-          <Input placeholder="Enter project ID" />
+          <Input
+            placeholder="Enter project ID"
+            addonAfter={
+              <Button
+                size="small"
+                onClick={() => {
+                  // Generate unique project ID (e.g., PRJ-YYYYMMDD-XXXX)
+                  const today = dayjs().format('YYYYMMDD');
+                  const random = Math.floor(1000 + Math.random() * 9000);
+                  const generated = `PRJ-${today}-${random}`;
+                  form.setFieldsValue({ project_id: generated });
+                }}
+              >
+                Generate
+              </Button>
+            }
+          />
         </Form.Item>
 
         <Form.Item
@@ -164,9 +200,9 @@ const AddProjectModal: React.FC<AddProjectModalProps> = ({
               (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
             }
           >
-            {users.map(user => (
-              <Option key={user.id} value={user.id}>
-                {user.name}
+            {engineers.map(engineer => (
+              <Option key={engineer.id} value={engineer.id}>
+                {engineer.name}
               </Option>
             ))}
           </Select>
@@ -199,9 +235,9 @@ const AddProjectModal: React.FC<AddProjectModalProps> = ({
               (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
             }
           >
-            {users.map(user => (
-              <Option key={user.id} value={user.id}>
-                {user.name}
+            {salesmen.map(salesman => (
+              <Option key={salesman.id} value={salesman.id}>
+                {salesman.name}
               </Option>
             ))}
           </Select>

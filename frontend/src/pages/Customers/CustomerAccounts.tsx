@@ -9,7 +9,7 @@ import {
   Col,
   Card,
   Typography,
-  Spin,
+
   Tooltip,
   Modal,
   message
@@ -28,6 +28,8 @@ import { apiService } from '../../api';
 import type { CustomerAccount } from '../../api';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
 import ErrorToast from '../../components/ErrorDisplay/ErrorToast';
+import AddAccountModal from '../Accounts/AddAccountModal';
+import EditAccountModal from '../Accounts/EditAccountModal';
 import dayjs from 'dayjs';
 
 const { Title } = Typography;
@@ -42,6 +44,9 @@ const CustomerAccounts: React.FC<CustomerAccountsProps> = ({ customerId }) => {
   const [filteredAccounts, setFilteredAccounts] = useState<CustomerAccount[]>([]);
   const [loading, setLoading] = useState(false);
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState<CustomerAccount | null>(null);
 
   // Use our custom error handler hook
   const { errorMessage, showError, clearError } = useErrorHandler();
@@ -207,6 +212,15 @@ const CustomerAccounts: React.FC<CustomerAccountsProps> = ({ customerId }) => {
     setFilteredAccounts(filtered);
   };
 
+  const handleAddInvoice = () => {
+    setShowAddModal(true);
+  };
+
+  const handleEdit = (account: CustomerAccount) => {
+    setSelectedAccount(account);
+    setShowEditModal(true);
+  };
+
   const handleView = (account: CustomerAccount) => {
     const { status, color } = getPaymentStatus(account.outstanding);
     Modal.info({
@@ -232,16 +246,29 @@ const CustomerAccounts: React.FC<CustomerAccountsProps> = ({ customerId }) => {
     });
   };
 
-  const handleEdit = (account: CustomerAccount) => {
-    message.info('Edit invoice functionality will be implemented in the Accounts module');
+  const handleAddSuccess = () => {
+    setShowAddModal(false);
+    fetchAccounts();
+    message.success('Invoice added successfully');
   };
 
-  const handleAddInvoice = () => {
-    message.info('Add invoice functionality will be implemented in the Accounts module');
+  const handleEditSuccess = () => {
+    setShowEditModal(false);
+    setSelectedAccount(null);
+    fetchAccounts();
+    message.success('Invoice updated successfully');
   };
 
   const clearFilters = () => {
     setDateRange(null);
+  };
+
+  const handleDateRangeChange = (dates: any, dateStrings: [string, string]) => {
+    if (dates) {
+      setDateRange([dates[0], dates[1]]);
+    } else {
+      setDateRange(null);
+    }
   };
 
   // Calculate summary statistics
@@ -313,7 +340,7 @@ const CustomerAccounts: React.FC<CustomerAccountsProps> = ({ customerId }) => {
               </label>
               <RangePicker
                 value={dateRange}
-                onChange={setDateRange}
+                onChange={handleDateRangeChange}
                 style={{ width: '100%' }}
                 placeholder={['Start Date', 'End Date']}
               />
@@ -377,6 +404,27 @@ const CustomerAccounts: React.FC<CustomerAccountsProps> = ({ customerId }) => {
             </p>
           </div>
         </Card>
+      )}
+
+      {/* Add Account Modal */}
+      <AddAccountModal
+        visible={showAddModal}
+        onCancel={() => setShowAddModal(false)}
+        onSuccess={handleAddSuccess}
+        initialCustomerId={customerId}
+      />
+
+      {/* Edit Account Modal */}
+      {selectedAccount && (
+        <EditAccountModal
+          visible={showEditModal}
+          account={selectedAccount}
+          onCancel={() => {
+            setShowEditModal(false);
+            setSelectedAccount(null);
+          }}
+          onSuccess={handleEditSuccess}
+        />
       )}
     </div>
   );

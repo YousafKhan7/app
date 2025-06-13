@@ -98,16 +98,6 @@ const MainLayout: React.FC = () => {
       label: 'Suppliers',
     },
     {
-      key: '/quotes',
-      icon: <FileTextOutlined />,
-      label: 'Quotes',
-    },
-    {
-      key: '/projects',
-      icon: <ProjectOutlined />,
-      label: 'Projects',
-    },
-    {
       key: '/accounts',
       icon: <DollarOutlined />,
       label: 'Accounts',

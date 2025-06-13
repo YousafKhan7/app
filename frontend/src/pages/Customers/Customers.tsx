@@ -4,7 +4,8 @@ import {
   Button,
   Typography,
   Space,
-  Spin
+  Spin,
+  Tabs
 } from 'antd';
 import { PlusOutlined, UserOutlined } from '@ant-design/icons';
 import { apiService } from '../../api';
@@ -12,9 +13,13 @@ import type { Customer } from '../../api';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
 import ErrorToast from '../../components/ErrorDisplay/ErrorToast';
 import CustomerInfo from './CustomerInfo';
+import CustomerQuotes from './CustomerQuotes';
+import CustomerAccounts from './CustomerAccounts';
+import CustomerProjects from './CustomerProjects';
 import AddCustomerModal from './AddCustomerModal';
 
 const { Title } = Typography;
+const { TabPane } = Tabs;
 
 const Customers: React.FC = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -151,11 +156,24 @@ const Customers: React.FC = () => {
                 </div>
               </div>
 
-              <CustomerInfo
-                customer={selectedCustomer}
-                onUpdate={handleCustomerUpdate}
-                onDelete={handleCustomerDelete}
-              />
+              <Tabs defaultActiveKey="info">
+                <TabPane tab="Information" key="info">
+                  <CustomerInfo
+                    customer={selectedCustomer}
+                    onUpdate={handleCustomerUpdate}
+                    onDelete={handleCustomerDelete}
+                  />
+                </TabPane>
+                <TabPane tab="Quotes" key="quotes">
+                  <CustomerQuotes customerId={selectedCustomer.id} />
+                </TabPane>
+                <TabPane tab="Accounts" key="accounts">
+                  <CustomerAccounts customerId={selectedCustomer.id} />
+                </TabPane>
+                <TabPane tab="Projects" key="projects">
+                  <CustomerProjects customerId={selectedCustomer.id} />
+                </TabPane>
+              </Tabs>
             </Card>
           ) : (
             <Card>

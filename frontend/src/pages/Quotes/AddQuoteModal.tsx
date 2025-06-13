@@ -14,6 +14,7 @@ import {
 import { apiService } from '../../api';
 import type { Quote, Customer, User } from '../../api';
 import dayjs from 'dayjs';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 const { Option } = Select;
 
@@ -21,17 +22,23 @@ interface AddQuoteModalProps {
   visible: boolean;
   onCancel: () => void;
   onSuccess: () => void;
+  initialCustomerId?: number;
 }
 
 const AddQuoteModal: React.FC<AddQuoteModalProps> = ({
   visible,
   onCancel,
-  onSuccess
+  onSuccess,
+  initialCustomerId,
 }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
+  const [engineers, setEngineers] = useState<User[]>([]);
+  const [salesmen, setSalesmen] = useState<User[]>([]);
+
+  // Use our custom error handler hook
+  const { errorMessage, showError, clearError } = useErrorHandler();
 
   const statusOptions = [
     { value: 'Draft', label: 'Draft' },
@@ -43,27 +50,44 @@ const AddQuoteModal: React.FC<AddQuoteModalProps> = ({
 
   useEffect(() => {
     if (visible) {
-      fetchDropdownData();
-      form.resetFields();
-      // Set default values
-      form.setFieldsValue({
-        date: dayjs(),
-        sell_price: 0,
-        status: 'Draft'
-      });
+      fetchCustomers();
+      fetchEngineers();
+      fetchSalesmen();
+      clearError();
+      
+      // Set initial customer if provided
+      if (initialCustomerId) {
+        form.setFieldsValue({
+          customer_id: initialCustomerId
+        });
+      }
     }
-  }, [visible, form]);
+  }, [visible, initialCustomerId]);
 
-  const fetchDropdownData = async () => {
+  const fetchCustomers = async () => {
     try {
-      const [customersData, usersData] = await Promise.all([
-        apiService.getCustomers(),
-        apiService.getUsers()
-      ]);
+      const customersData = await apiService.getCustomers();
       setCustomers(customersData);
-      setUsers(usersData);
     } catch (error: any) {
-      message.error('Failed to fetch dropdown data');
+      message.error('Failed to fetch customers');
+    }
+  };
+
+  const fetchEngineers = async () => {
+    try {
+      const engineersData = await apiService.getUsers();
+      setEngineers(engineersData);
+    } catch (error: any) {
+      message.error('Failed to fetch engineers');
+    }
+  };
+
+  const fetchSalesmen = async () => {
+    try {
+      const salesmenData = await apiService.getUsers();
+      setSalesmen(salesmenData);
+    } catch (error: any) {
+      message.error('Failed to fetch salesmen');
     }
   };
 
@@ -218,7 +242,7 @@ const AddQuoteModal: React.FC<AddQuoteModalProps> = ({
                     (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
                   }
                 >
-                  {users.map(user => (
+                  {engineers.map(user => (
                     <Option key={user.id} value={user.id}>
                       {user.name}
                     </Option>
@@ -240,7 +264,7 @@ const AddQuoteModal: React.FC<AddQuoteModalProps> = ({
                     (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
                   }
                 >
-                  {users.map(user => (
+                  {salesmen.map(user => (
                     <Option key={user.id} value={user.id}>
                       {user.name}
                     </Option>

@@ -23,12 +23,14 @@ interface AddAccountModalProps {
   visible: boolean;
   onCancel: () => void;
   onSuccess: () => void;
+  initialCustomerId?: number;
 }
 
 const AddAccountModal: React.FC<AddAccountModalProps> = ({
   visible,
   onCancel,
   onSuccess,
+  initialCustomerId,
 }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
@@ -43,8 +45,15 @@ const AddAccountModal: React.FC<AddAccountModalProps> = ({
       fetchCustomers();
       fetchProjects();
       clearError();
+      
+      // Set initial customer if provided
+      if (initialCustomerId) {
+        form.setFieldsValue({
+          customer_id: initialCustomerId
+        });
+      }
     }
-  }, [visible]);
+  }, [visible, initialCustomerId]);
 
   const fetchCustomers = async () => {
     try {
@@ -118,7 +127,23 @@ const AddAccountModal: React.FC<AddAccountModalProps> = ({
           label="Invoice Number"
           rules={[{ required: true, message: 'Please enter invoice number' }]}
         >
-          <Input placeholder="Enter invoice number" />
+          <Input
+            placeholder="Enter invoice number"
+            addonAfter={
+              <Button
+                size="small"
+                onClick={async () => {
+                  // Generate unique invoice number (e.g., INV-YYYYMMDD-XXXX)
+                  const today = dayjs().format('YYYYMMDD');
+                  const random = Math.floor(1000 + Math.random() * 9000);
+                  const generated = `INV-${today}-${random}`;
+                  form.setFieldsValue({ invoice_number: generated });
+                }}
+              >
+                Generate
+              </Button>
+            }
+          />
         </Form.Item>
 
         <Form.Item
@@ -188,7 +213,7 @@ const AddAccountModal: React.FC<AddAccountModalProps> = ({
             step={0.01}
             precision={2}
             formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-            parser={value => value!.replace(/\$\s?|(,*)/g, '')}
+            parser={value => (value ? value.replace(/\$\s?|,/g, '') : '')}
             placeholder="Enter amount"
           />
         </Form.Item>
@@ -204,7 +229,7 @@ const AddAccountModal: React.FC<AddAccountModalProps> = ({
             step={0.01}
             precision={2}
             formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-            parser={value => value!.replace(/\$\s?|(,*)/g, '')}
+            parser={value => (value ? value.replace(/\$\s?|,/g, '') : '')}
             placeholder="Enter outstanding amount"
           />
         </Form.Item>
