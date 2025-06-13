@@ -1,8 +1,6 @@
-import React, { useState } from 'react';
-import { Layout, Menu, Button, Typography } from 'antd';
+import React, { useState, Suspense, useEffect } from 'react';
+import { Layout, Menu, Button, Typography, Spin, Avatar } from 'antd';
 import {
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
   SettingOutlined,
   HomeOutlined,
   UserOutlined,
@@ -12,17 +10,26 @@ import {
   DollarOutlined,
   ShopOutlined,
   DatabaseOutlined,
-  PercentageOutlined
+  PercentageOutlined,
+  ContactsOutlined,
+  MailOutlined
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+// Import logo from assets
+import logo from '../../assets/logo.png';
 
 const { Header, Sider, Content } = Layout;
 const { Title } = Typography;
 
 const MainLayout: React.FC = () => {
-  const [collapsed, setCollapsed] = useState(false);
+  const [settingsSidebarVisible, setSettingsSidebarVisible] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Check if current route is a settings page
+  useEffect(() => {
+    setSettingsSidebarVisible(location.pathname.startsWith('/settings'));
+  }, [location.pathname]);
 
   const settingsMenuItems = [
     {
@@ -76,59 +83,112 @@ const MainLayout: React.FC = () => {
     {
       key: '/',
       icon: <HomeOutlined />,
-      label: 'Dashboard',
+      label: 'Home',
     },
     {
-      key: 'settings',
+      key: '/customers',
+      icon: <ContactsOutlined />,
+      label: 'Customers',
+    },
+    {
+      key: '/suppliers',
+      icon: <ShopOutlined />,
+      label: 'Suppliers',
+    },
+    {
+      key: '/accounts',
+      icon: <DollarOutlined />,
+      label: 'Accounts',
+    },
+    {
+      key: '/settings',
       icon: <SettingOutlined />,
       label: 'Settings',
-      children: settingsMenuItems,
     },
   ];
 
   const handleMenuClick = (e: any) => {
-    if (e.key !== 'settings') {
+    if (e.key === '/settings') {
+      navigate('/settings/users');
+    } else {
       navigate(e.key);
     }
   };
 
+  const getCurrentSettingsMenuItem = () => {
+    return settingsMenuItems.find(item => location.pathname === item.key)?.key || '/settings/users';
+  };
+
   return (
     <Layout className="min-h-screen">
-      <Sider 
-        trigger={null} 
-        collapsible 
-        collapsed={collapsed}
-        width={250}
-        className="bg-white shadow-lg"
-      >
-        <div className="p-4 border-b">
-          <Title level={4} className="m-0 text-center">
-            {collapsed ? 'App' : 'Full Stack App'}
+      <Header className="bg-white px-4 shadow-sm flex items-center justify-between h-16 z-10">
+        <div className="flex items-center">
+          <div className="logo-container mr-4">
+            <img 
+              src={logo} 
+              alt="Company Logo" 
+              className="h-10 w-auto"
+            />
+          </div>
+          <Title level={4} className="m-0">
+            Client Centre
           </Title>
         </div>
-        <Menu
-          mode="inline"
-          selectedKeys={[location.pathname]}
-          defaultOpenKeys={location.pathname.startsWith('/settings') ? ['settings'] : []}
-          items={mainMenuItems}
-          onClick={handleMenuClick}
-          className="border-r-0"
-        />
-      </Sider>
-      
-      <Layout>
-        <Header className="bg-white px-4 shadow-sm flex items-center">
+        
+        <div className="flex items-center">
           <Button
             type="text"
-            icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            onClick={() => setCollapsed(!collapsed)}
-            className="text-lg"
+            icon={<MailOutlined />}
+            className="mr-2"
           />
-        </Header>
+          <div className="user-info flex items-center cursor-pointer">
+            <span className="mr-2">Choudhry Raza</span>
+            <Avatar icon={<UserOutlined />} />
+          </div>
+        </div>
+      </Header>
+      
+      <Layout>
+        <div className="top-navigation border-b bg-white">
+          <Menu
+            mode="horizontal"
+            selectedKeys={[location.pathname.split('/')[1] ? '/' + location.pathname.split('/')[1] : '/']}
+            items={mainMenuItems}
+            onClick={handleMenuClick}
+            className="border-r-0"
+          />
+        </div>
         
-        <Content className="p-6 bg-gray-50">
-          <Outlet />
-        </Content>
+        <Layout>
+          {settingsSidebarVisible && (
+            <Sider
+              width={250}
+              className="bg-white shadow-sm site-layout-background"
+              collapsible={false}
+            >
+              <div className="p-4">
+                <Title level={5} className="m-0">System settings</Title>
+              </div>
+              <Menu
+                mode="inline"
+                selectedKeys={[getCurrentSettingsMenuItem()]}
+                items={settingsMenuItems}
+                onClick={handleMenuClick}
+                className="border-r-0"
+              />
+            </Sider>
+          )}
+          
+          <Content className="p-6 bg-gray-50 min-h-[calc(100vh-64px-46px)]">
+            <Suspense fallback={
+              <div className="flex justify-center items-center h-64">
+                <Spin size="large" />
+              </div>
+            }>
+              <Outlet />
+            </Suspense>
+          </Content>
+        </Layout>
       </Layout>
     </Layout>
   );

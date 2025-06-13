@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   Table,
@@ -7,38 +7,83 @@ import {
   Form,
   Input,
   Space,
-  Typography,
+  Switch,
+  Tag,
+  message,
+  Tabs,
   Popconfirm
 } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import { apiService } from '../../api';
+import { EditOutlined, SearchOutlined, DownloadOutlined, FilterOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { User, UserCreate } from '../../api';
+import { useUsers, useCreateUser, useUpdateUser } from '../../hooks/useApiQueries';
+import FormErrorDisplay from '../../components/FormErrorDisplay';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
-import ErrorToast from '../../components/ErrorDisplay/ErrorToast';
 
-const { Title } = Typography;
+const { TabPane } = Tabs;
 
 const Users: React.FC = () => {
-  const [data, setData] = useState<User[]>([]);
-  const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<User | null>(null);
   const [form] = Form.useForm();
+  const [searchText, setSearchText] = useState('');
+  const [activeTab, setActiveTab] = useState('active');
 
-  // Use our custom error handler hook
+  // React Query hooks
+  const { data = [], isLoading } = useUsers();
+  const createUserMutation = useCreateUser();
+  const updateUserMutation = useUpdateUser();
+
+  // Error handler for form-level errors
   const { errorMessage, showError, clearError } = useErrorHandler();
+
+  // Filter users based on active status and search text
+  const filteredUsers = data.filter((user: User) => {
+    let matchesActiveStatus = true;
+    
+    if (activeTab === 'active') {
+      matchesActiveStatus = !!user.active;
+    } else if (activeTab === 'inactive') {
+      matchesActiveStatus = !user.active;
+    }
+    // For 'all' tab, we don't filter by active status
+    
+    const matchesSearch = searchText === '' || 
+      user.name?.toLowerCase().includes(searchText.toLowerCase()) || 
+      user.email?.toLowerCase().includes(searchText.toLowerCase());
+    
+    return matchesActiveStatus && matchesSearch;
+  });
 
   const columns = [
     {
-      title: 'ID',
-      dataIndex: 'id',
-      key: 'id',
-      width: 80,
-    },
-    {
-      title: 'Name',
+      title: 'First Name',
       dataIndex: 'name',
       key: 'name',
+      render: (name: string) => {
+        const nameParts = name ? name.split(' ') : [''];
+        return nameParts[0];
+      }
+    },
+    {
+      title: 'Last Name',
+      dataIndex: 'name',
+      key: 'lastName',
+      render: (name: string) => {
+        const nameParts = name ? name.split(' ') : ['', ''];
+        return nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+      }
+    },
+    {
+      title: 'Work Phone',
+      dataIndex: 'phone',
+      key: 'phone',
+      render: (phone: string) => phone || '-'
+    },
+    {
+      title: 'Cell Phone',
+      dataIndex: 'cellPhone',
+      key: 'cellPhone',
+      render: (cellPhone: string) => cellPhone || '-'
     },
     {
       title: 'Email',
@@ -46,19 +91,35 @@ const Users: React.FC = () => {
       key: 'email',
     },
     {
-      title: 'Created At',
-      dataIndex: 'created_at',
-      key: 'created_at',
-      render: (date: string) => date ? new Date(date).toLocaleDateString() : '-',
+      title: 'No. of Cards',
+      dataIndex: 'cardCount',
+      key: 'cardCount',
+      render: () => 0
     },
     {
-      title: 'Actions',
+      title: 'No. of Proxies',
+      dataIndex: 'proxyCount',
+      key: 'proxyCount',
+      render: () => 0
+    },
+    {
+      title: 'Status',
+      dataIndex: 'active',
+      key: 'active',
+      render: (active: boolean) => (
+        <Tag color={active ? 'green' : 'red'}>
+          {active ? 'Active' : 'Inactive'}
+        </Tag>
+      ),
+    },
+    {
+      title: 'Details',
       key: 'actions',
       width: 120,
       render: (_: any, record: User) => (
         <Space>
           <Button
-            type="text"
+            type="link"
             icon={<EditOutlined />}
             onClick={() => handleEdit(record)}
             size="small"
@@ -72,8 +133,8 @@ const Users: React.FC = () => {
             <Button
               type="text"
               icon={<DeleteOutlined />}
-              danger
               size="small"
+              danger
             />
           </Popconfirm>
         </Space>
@@ -81,91 +142,118 @@ const Users: React.FC = () => {
     },
   ];
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const usersData = await apiService.getUsers();
-      setData(usersData);
-    } catch (error: any) {
-      showError(error.message || 'Failed to fetch users');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const handleAdd = () => {
     setEditingRecord(null);
     form.resetFields();
-    clearError(); // Clear any previous error messages
+    clearError(); // Clear any previous errors
     setModalVisible(true);
   };
 
   const handleEdit = (record: User) => {
     setEditingRecord(record);
     form.setFieldsValue(record);
-    clearError(); // Clear any previous error messages
+    clearError(); // Clear any previous errors
     setModalVisible(true);
-  };
-
-  const handleDelete = async (id: number) => {
-    try {
-      await apiService.deleteUser(id);
-      console.log('User deleted successfully');
-      fetchData(); // Refresh the data
-    } catch (error: any) {
-      showError(error.message || 'Failed to delete user');
-    }
   };
 
   const handleSubmit = async (values: UserCreate) => {
     try {
       if (editingRecord) {
         // Update existing user
-        await apiService.updateUser(editingRecord.id, values);
-        console.log('User updated successfully');
+        await updateUserMutation.mutateAsync({ id: editingRecord.id, user: values });
+        message.success('User updated successfully');
       } else {
         // Add new user
-        await apiService.createUser(values);
-        console.log('User added successfully');
+        await createUserMutation.mutateAsync(values);
+        message.success('User created successfully');
       }
       setModalVisible(false);
       form.resetFields();
-      fetchData(); // Refresh the data
+      clearError(); // Clear errors on success
     } catch (error: any) {
       showError(error.message || 'Failed to save user');
     }
   };
 
-  return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <Title level={2}>Users</Title>
-        <Button 
-          type="primary" 
-          icon={<PlusOutlined />}
-          onClick={handleAdd}
-        >
-          Add User
-        </Button>
-      </div>
+  const handleSearch = (value: string) => {
+    setSearchText(value);
+  };
 
-      <Card>
-        <Table
-          columns={columns}
-          dataSource={data}
-          rowKey="id"
-          loading={loading}
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showQuickJumper: true,
-          }}
-        />
-      </Card>
+  const handleTabChange = (key: string) => {
+    setActiveTab(key);
+    setSearchText('');
+  };
+
+  const handleDelete = async (id: number) => {
+    try {
+      // You may want to add a check to prevent deleting yourself or super admin
+      await updateUserMutation.mutateAsync({ id, user: { active: false } });
+      message.success('User deleted successfully');
+    } catch (error: any) {
+      showError(error.message || 'Failed to delete user');
+    }
+  };
+
+  return (
+    <div role="main" aria-label="Users Management">
+      <div className="mb-6">
+        <Card className="mb-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+            <div className="w-full md:w-2/3 mb-4 md:mb-0">
+              <Input
+                placeholder="Search by first name, last name or email"
+                prefix={<SearchOutlined />}
+                onChange={(e) => handleSearch(e.target.value)}
+                value={searchText}
+                className="w-full"
+                allowClear
+              />
+            </div>
+            <div className="flex items-center">
+              <Button
+                type="primary"
+                icon={<FilterOutlined />}
+                className="mr-2"
+              >
+                Search
+              </Button>
+            </div>
+          </div>
+          
+          <Tabs activeKey={activeTab} onChange={handleTabChange}>
+            <TabPane tab="Active users" key="active" />
+            <TabPane tab="Inactive users" key="inactive" />
+            <TabPane tab="All" key="all" />
+          </Tabs>
+          
+          <div className="flex justify-between items-center mb-4">
+            <Button 
+              type="primary"
+              onClick={handleAdd}
+            >
+              New user
+            </Button>
+          </div>
+
+          <Table
+            columns={columns}
+            dataSource={filteredUsers}
+            rowKey="id"
+            loading={isLoading || createUserMutation.isPending || updateUserMutation.isPending}
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: true,
+              showQuickJumper: true,
+              position: ['bottomRight'],
+              showTotal: (total) => `${total} items`,
+              showLessItems: true,
+            }}
+            aria-label="Users table"
+            aria-describedby="users-table-description"
+            size="middle"
+          />
+        </Card>
+      </div>
 
       <Modal
         title={editingRecord ? 'Edit User' : 'Add User'}
@@ -173,21 +261,40 @@ const Users: React.FC = () => {
         onCancel={() => setModalVisible(false)}
         footer={null}
         width={500}
+        aria-labelledby="user-modal-title"
+        aria-describedby="user-modal-description"
       >
+        <div id="user-modal-description" className="sr-only">
+          {editingRecord ? 'Edit existing user information' : 'Add new user to the system'}
+        </div>
         <Form
           form={form}
           layout="vertical"
           onFinish={handleSubmit}
         >
-          {/* Error Display at the top of the form */}
-          <ErrorToast message={errorMessage} onClose={clearError} />
+          {/* Error Display */}
+          <FormErrorDisplay error={errorMessage} onClose={clearError} />
 
           <Form.Item
             name="name"
             label="Name"
             rules={[{ required: true, message: 'Please enter user name' }]}
           >
-            <Input placeholder="Enter user name" />
+            <Input placeholder="e.g., John Smith" />
+          </Form.Item>
+
+          <Form.Item
+            name="phone"
+            label="Work Phone"
+          >
+            <Input placeholder="e.g., 9058457558" />
+          </Form.Item>
+
+          <Form.Item
+            name="cellPhone"
+            label="Cell Phone"
+          >
+            <Input placeholder="e.g., 9058457558" />
           </Form.Item>
 
           <Form.Item
@@ -198,7 +305,19 @@ const Users: React.FC = () => {
               { type: 'email', message: 'Please enter valid email' }
             ]}
           >
-            <Input placeholder="Enter email address" />
+            <Input placeholder="e.g., john@company.com" />
+          </Form.Item>
+
+          <Form.Item
+            name="active"
+            label="Status"
+            valuePropName="checked"
+            initialValue={true}
+          >
+            <Switch
+              checkedChildren="Active"
+              unCheckedChildren="Inactive"
+            />
           </Form.Item>
 
           <Form.Item className="mb-0 text-right">
