@@ -3,9 +3,9 @@
  * Enhanced accessibility and consistent styling
  */
 import React from 'react';
-import { Input as AntInput, InputProps } from 'antd';
+import { Input as AntInput, type InputProps } from 'antd';
 
-interface ProfessionalInputProps extends InputProps {
+interface ProfessionalInputProps extends Omit<InputProps, 'label'> {
   label?: string;
   helpText?: string;
   error?: string;

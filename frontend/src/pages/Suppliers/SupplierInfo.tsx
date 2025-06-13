@@ -9,7 +9,6 @@ import {
   Select,
   InputNumber,
   Space,
-  Divider,
   Typography,
   Popconfirm,
   message
@@ -82,7 +81,7 @@ const SupplierInfo: React.FC<SupplierInfoProps> = ({ supplier, onUpdate, onDelet
   const fetchUsers = async () => {
     try {
       const userData = await apiService.getUsers();
-      setUsers(userData);
+      setUsers(userData as User[]);
     } catch (error: any) {
       showError(error);
     }
@@ -91,7 +90,7 @@ const SupplierInfo: React.FC<SupplierInfoProps> = ({ supplier, onUpdate, onDelet
   const fetchCurrencies = async () => {
     try {
       const currencyData = await apiService.getCurrencies();
-      setCurrencies(currencyData);
+      setCurrencies(currencyData as Currency[]);
     } catch (error: any) {
       showError(error);
     }
@@ -137,7 +136,7 @@ const SupplierInfo: React.FC<SupplierInfoProps> = ({ supplier, onUpdate, onDelet
         tax_rate: values.tax_rate || 0
       };
 
-      await apiService.updateSupplier(supplier.id, transformedValues);
+      await apiService.updateSupplier(supplier.id, transformedValues as SupplierCreate);
       setEditing(false);
       onUpdate(); // Refresh supplier data
       message.success('Supplier updated successfully');
@@ -486,7 +485,7 @@ const SupplierInfo: React.FC<SupplierInfoProps> = ({ supplier, onUpdate, onDelet
                 <Select placeholder="Select currency" allowClear>
                   {currencies.map(currency => (
                     <Option key={currency.id} value={currency.id}>
-                      {currency.currency || currency.name} (Rate: {currency.rate})
+                      {currency.currency} (Rate: {currency.rate})
                     </Option>
                   ))}
                 </Select>

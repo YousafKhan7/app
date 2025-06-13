@@ -3,10 +3,10 @@
  * Consistent styling and accessibility features
  */
 import React from 'react';
-import { Button as AntButton, ButtonProps } from 'antd';
+import { Button as AntButton, type ButtonProps } from 'antd';
 import { LoadingOutlined } from '@ant-design/icons';
 
-interface ProfessionalButtonProps extends ButtonProps {
+interface ProfessionalButtonProps extends Omit<ButtonProps, 'variant'> {
   variant?: 'primary' | 'secondary' | 'success' | 'warning' | 'error';
   isLoading?: boolean;
   loadingText?: string;
