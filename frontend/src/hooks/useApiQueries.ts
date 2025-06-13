@@ -7,8 +7,7 @@ import type {
   User, UserCreate,
   Customer, CustomerCreate,
   Supplier, SupplierCreate,
-  Currency, Department, Location, Team, Warehouse, Commission,
-  Quote, Project, CustomerAccount,
+
   PaginationParams, PaginatedResponse
 } from '../api';
 
@@ -79,7 +78,8 @@ export const useCreateUser = () => {
 
       return { previousUsers };
     },
-    onError: (err, newUser, context) => {
+    onError: (err, context: any) => {
+      console.error(err);
       // Rollback on error
       if (context?.previousUsers) {
         queryClient.setQueryData(queryKeys.users, context.previousUsers);
@@ -113,7 +113,8 @@ export const useUpdateUser = () => {
 
       return { previousUsers };
     },
-    onError: (err, variables, context) => {
+    onError: (err, context: any) => {
+      console.error(err);
       if (context?.previousUsers) {
         queryClient.setQueryData(queryKeys.users, context.previousUsers);
       }
@@ -147,7 +148,8 @@ export const useDeleteUser = () => {
       
       return { previousUsers };
     },
-    onError: (err, userId, context) => {
+    onError: (err, context: any) => {
+      console.error(err);
       // Rollback on error
       if (context?.previousUsers) {
         queryClient.setQueryData(queryKeys.users, context.previousUsers);
@@ -183,15 +185,16 @@ export const useCreateCustomer = () => {
         const optimisticCustomer: Customer = {
           id: Date.now(),
           ...newCustomer,
-          sales_rep_name: null,
-          currency_name: null,
+          sales_rep_name: undefined,
+          currency_name: undefined,
         };
         queryClient.setQueryData<Customer[]>(queryKeys.customers, [...previousCustomers, optimisticCustomer]);
       }
 
       return { previousCustomers };
     },
-    onError: (err, newCustomer, context) => {
+    onError: (err, context: any) => {
+      console.error(err);
       if (context?.previousCustomers) {
         queryClient.setQueryData(queryKeys.customers, context.previousCustomers);
       }
@@ -233,7 +236,8 @@ export const useDeleteCustomer = () => {
       
       return { previousCustomers };
     },
-    onError: (err, customerId, context) => {
+    onError: (err, context: any) => {
+      console.error(err);
       if (context?.previousCustomers) {
         queryClient.setQueryData(queryKeys.customers, context.previousCustomers);
       }
@@ -295,7 +299,8 @@ export const useDeleteSupplier = () => {
       
       return { previousSuppliers };
     },
-    onError: (err, supplierId, context) => {
+    onError: (err, context: any) => {
+      console.error(err);
       if (context?.previousSuppliers) {
         queryClient.setQueryData(queryKeys.suppliers, context.previousSuppliers);
       }

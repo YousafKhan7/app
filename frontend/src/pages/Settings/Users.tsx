@@ -13,7 +13,7 @@ import {
   Tabs,
   Popconfirm
 } from 'antd';
-import { EditOutlined, SearchOutlined, DownloadOutlined, FilterOutlined, DeleteOutlined } from '@ant-design/icons';
+import { EditOutlined, SearchOutlined, FilterOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { User, UserCreate } from '../../api';
 import { useUsers, useCreateUser, useUpdateUser } from '../../hooks/useApiQueries';
 import FormErrorDisplay from '../../components/FormErrorDisplay';
@@ -187,7 +187,14 @@ const Users: React.FC = () => {
   const handleDelete = async (id: number) => {
     try {
       // You may want to add a check to prevent deleting yourself or super admin
-      await updateUserMutation.mutateAsync({ id, user: { active: false } });
+      await updateUserMutation.mutateAsync({ 
+        id, 
+        user: { 
+          active: false,
+          name: editingRecord?.name || '',
+          email: editingRecord?.email || ''
+        } 
+      });
       message.success('User deleted successfully');
     } catch (error: any) {
       showError(error.message || 'Failed to delete user');

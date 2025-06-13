@@ -10,9 +10,6 @@ interface ValidationError {
   ctx?: any;
 }
 
-interface BackendErrorResponse {
-  detail: ValidationError[] | string;
-}
 
 /**
  * Parse backend validation errors into user-friendly messages

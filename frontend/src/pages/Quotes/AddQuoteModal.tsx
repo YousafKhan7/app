@@ -12,7 +12,7 @@ import {
   message
 } from 'antd';
 import { apiService } from '../../api';
-import type { Quote, Customer, User } from '../../api';
+import type {  Customer, User } from '../../api';
 import dayjs from 'dayjs';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
 
@@ -38,7 +38,7 @@ const AddQuoteModal: React.FC<AddQuoteModalProps> = ({
   const [salesmen, setSalesmen] = useState<User[]>([]);
 
   // Use our custom error handler hook
-  const { errorMessage, showError, clearError } = useErrorHandler();
+  const {  clearError } = useErrorHandler();
 
   const statusOptions = [
     { value: 'Draft', label: 'Draft' },
@@ -76,7 +76,7 @@ const AddQuoteModal: React.FC<AddQuoteModalProps> = ({
   const fetchEngineers = async () => {
     try {
       const engineersData = await apiService.getUsers();
-      setEngineers(engineersData);
+      setEngineers(engineersData as User[]);
     } catch (error: any) {
       message.error('Failed to fetch engineers');
     }
@@ -85,7 +85,7 @@ const AddQuoteModal: React.FC<AddQuoteModalProps> = ({
   const fetchSalesmen = async () => {
     try {
       const salesmenData = await apiService.getUsers();
-      setSalesmen(salesmenData);
+      setSalesmen(salesmenData as User[]);
     } catch (error: any) {
       message.error('Failed to fetch salesmen');
     }
@@ -291,7 +291,10 @@ const AddQuoteModal: React.FC<AddQuoteModalProps> = ({
                   step={0.01}
                   style={{ width: '100%' }}
                   formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={value => value!.replace(/\$\s?|(,*)/g, '')}
+                  parser={(value: string | undefined): number => {
+                    const parsed = value ? parseFloat(value.replace(/\$\s?|,/g, '')) : 0;
+                    return isNaN(parsed) ? 0 : parsed;
+                  }}
                 />
               </Form.Item>
             </Col>

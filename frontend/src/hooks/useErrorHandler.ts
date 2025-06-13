@@ -53,9 +53,8 @@ export const useErrorHandler = () => {
     }
 
     setErrorMessage(userFriendlyMessage);
-
     // Auto-hide after 8 seconds with cleanup
-    timeoutRef.current = setTimeout(() => {
+    timeoutRef.current = window.setTimeout(() => {
       setErrorMessage(null);
       timeoutRef.current = null;
     }, 8000);
