@@ -40,9 +40,9 @@ async def get_locations():
 
 @router.post("/locations")
 async def create_location(location: LocationCreate):
-    query = "INSERT INTO locations (number, name) VALUES (%s, %s) RETURNING id"
+    query = "INSERT INTO locations (number, name) VALUES (%s, %s) RETURNING *"
     result = execute_query(query, (location.number, location.name), fetch_one=True)
-    return {"message": "Location created successfully", "location_id": result['id']}
+    return {"message": "Location created successfully", "location": result}
 
 @router.put("/locations/{location_id}")
 async def update_location(location_id: int, location: LocationCreate):
@@ -88,9 +88,9 @@ async def get_teams():
 
 @router.post("/teams")
 async def create_team(team: TeamCreate):
-    query = "INSERT INTO teams (name, description) VALUES (%s, %s) RETURNING id"
+    query = "INSERT INTO teams (name, description) VALUES (%s, %s) RETURNING *"
     result = execute_query(query, (team.name, team.description), fetch_one=True)
-    return {"message": "Team created successfully", "team_id": result['id']}
+    return {"message": "Team created successfully", "team": result}
 
 @router.put("/teams/{team_id}")
 async def update_team(team_id: int, team: TeamCreate):
@@ -112,9 +112,9 @@ async def get_warehouses():
 
 @router.post("/warehouses")
 async def create_warehouse(warehouse: WarehouseCreate):
-    query = "INSERT INTO warehouses (warehouse_name, number, markup) VALUES (%s, %s, %s) RETURNING id"
+    query = "INSERT INTO warehouses (warehouse_name, number, markup) VALUES (%s, %s, %s) RETURNING *"
     result = execute_query(query, (warehouse.warehouse_name, warehouse.number, warehouse.markup), fetch_one=True)
-    return {"message": "Warehouse created successfully", "warehouse_id": result['id']}
+    return {"message": "Warehouse created successfully", "warehouse": result}
 
 @router.put("/warehouses/{warehouse_id}")
 async def update_warehouse(warehouse_id: int, warehouse: WarehouseCreate):
@@ -138,10 +138,10 @@ async def get_commissions():
 async def create_commission(commission: CommissionCreate):
     query = """INSERT INTO commissions
                (type, percentage, gp, sales, commercial_billing, payment)
-               VALUES (%s, %s, %s, %s, %s, %s) RETURNING id"""
+               VALUES (%s, %s, %s, %s, %s, %s) RETURNING *"""
     result = execute_query(query, (commission.type, commission.percentage, commission.gp,
                                  commission.sales, commission.commercial_billing, commission.payment), fetch_one=True)
-    return {"message": "Commission created successfully", "commission_id": result['id']}
+    return {"message": "Commission created successfully", "commission": result}
 
 @router.put("/commissions/{commission_id}")
 async def update_commission(commission_id: int, commission: CommissionCreate):

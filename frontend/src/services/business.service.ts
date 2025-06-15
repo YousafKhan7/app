@@ -42,7 +42,7 @@ export const businessService = {
   // Locations
   getLocations: async (): Promise<Location[]> => {
     const response = await apiClient.get('/locations');
-    return response.data.locations;
+    return response.data.locations || [];
   },
 
   createLocation: async (location: LocationCreate): Promise<any> => {
@@ -84,7 +84,7 @@ export const businessService = {
   // Teams
   getTeams: async (): Promise<Team[]> => {
     const response = await apiClient.get('/teams');
-    return response.data.teams;
+    return response.data.teams || [];
   },
 
   createTeam: async (team: TeamCreate): Promise<any> => {
@@ -105,7 +105,7 @@ export const businessService = {
   // Warehouses
   getWarehouses: async (): Promise<Warehouse[]> => {
     const response = await apiClient.get('/warehouses');
-    return response.data.warehouses;
+    return response.data.warehouses || [];
   },
 
   createWarehouse: async (warehouse: WarehouseCreate): Promise<any> => {
@@ -126,7 +126,7 @@ export const businessService = {
   // Commissions
   getCommissions: async (): Promise<Commission[]> => {
     const response = await apiClient.get('/commissions');
-    return response.data.commissions;
+    return response.data.commissions || [];
   },
 
   createCommission: async (commission: CommissionCreate): Promise<any> => {
