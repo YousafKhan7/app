@@ -33,10 +33,10 @@ const Customers: React.FC = () => {
   const fetchCustomers = async () => {
     setLoading(true);
     try {
-      const customerData = await apiService.getCustomers();
-      setCustomers(customerData);
-      if (customerData.length > 0 && !selectedCustomer) {
-        setSelectedCustomer(customerData[0]);
+      const response = await apiService.getCustomers();
+      setCustomers(response.customers);
+      if (response.customers.length > 0 && !selectedCustomer) {
+        setSelectedCustomer(response.customers[0]);
       }
     } catch (error: any) {
       showError(error.message || 'Failed to fetch customers');
@@ -58,7 +58,7 @@ const Customers: React.FC = () => {
     // Update selected customer with fresh data
     if (selectedCustomer) {
       const updatedCustomers = await apiService.getCustomers();
-      const updatedSelectedCustomer = updatedCustomers.find(c => c.id === selectedCustomer.id);
+      const updatedSelectedCustomer = updatedCustomers.customers.find((c: Customer) => c.id === selectedCustomer.id);
       if (updatedSelectedCustomer) {
         setSelectedCustomer(updatedSelectedCustomer);
       }

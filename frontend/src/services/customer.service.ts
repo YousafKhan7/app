@@ -14,9 +14,9 @@ import type {
 
 export const customerService = {
   // Customers
-  getCustomers: async (): Promise<Customer[]> => {
+  getCustomers: async (): Promise<{ customers: Customer[], pagination: { page: number, limit: number, total: number, pages: number } }> => {
     const response = await apiClient.get('/customers');
-    return response.data.customers;
+    return response.data;
   },
 
   createCustomer: async (customer: CustomerCreate): Promise<any> => {
@@ -51,9 +51,9 @@ export const customerService = {
   },
 
   // Suppliers
-  getSuppliers: async (): Promise<Supplier[]> => {
+  getSuppliers: async (): Promise<{ suppliers: Supplier[], pagination: { page: number, limit: number, total: number, pages: number } }> => {
     const response = await apiClient.get('/suppliers');
-    return response.data.suppliers;
+    return response.data;
   },
 
   createSupplier: async (supplier: SupplierCreate): Promise<any> => {

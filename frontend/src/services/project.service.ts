@@ -65,9 +65,9 @@ export const projectService = {
   },
 
   // Customer Accounts
-  getAccounts: async (): Promise<CustomerAccount[]> => {
+  getAccounts: async (): Promise<{ accounts: CustomerAccount[], pagination: { page: number, limit: number, total: number, pages: number } }> => {
     const response = await apiClient.get('/accounts');
-    return response.data.accounts;
+    return response.data;
   },
 
   createAccount: async (account: CustomerAccountCreate): Promise<any> => {

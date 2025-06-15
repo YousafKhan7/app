@@ -167,6 +167,7 @@ export const useCustomers = () => {
   return useQuery({
     queryKey: queryKeys.customers,
     queryFn: apiService.getCustomers,
+    select: (data) => data.customers,
   });
 };
 

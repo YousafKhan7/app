@@ -64,7 +64,7 @@ const EditAccountModal: React.FC<EditAccountModalProps> = ({
   const fetchCustomers = async () => {
     try {
       const customersData = await apiService.getCustomers();
-      setCustomers(customersData);
+      setCustomers(customersData.customers);
     } catch (error: any) {
       showError(error.message || 'Failed to fetch customers');
     }
