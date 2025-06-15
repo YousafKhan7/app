@@ -3,13 +3,10 @@
  */
 import axios from 'axios';
 
-// Determine API base URL based on environment
-const API_BASE_URL = import.meta.env.PROD
-  ? ''  // Production: use relative path without /api prefix
-  : 'http://localhost:8000';  // Development: use localhost
-
-export const apiClient = axios.create({
-  baseURL: API_BASE_URL,
+const apiClient = axios.create({
+  baseURL: import.meta.env.PROD 
+    ? 'http://31.97.138.28/api'  // Production URL
+    : 'http://localhost:8000',   // Development URL
   headers: {
     'Content-Type': 'application/json',
   },

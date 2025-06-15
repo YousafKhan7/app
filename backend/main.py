@@ -29,6 +29,8 @@ app.add_middleware(
         "https://*.vercel.app",   # Vercel deployments
         "http://*",              # Allow all HTTP domains
         "https://*",             # Allow all HTTPS domains
+        "http://31.97.138.28",   # Your VPS IP
+        "https://31.97.138.28",  # Your VPS IP with HTTPS
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -41,7 +43,7 @@ atexit.register(cleanup_database)
 # Include routers
 app.include_router(users.router, tags=["users"])
 app.include_router(accounting.router, tags=["accounting"])
-app.include_router(business.router, tags=["business"])
+app.include_router(business.router, prefix="/settings", tags=["business"])
 app.include_router(customers.router, tags=["customers"])
 app.include_router(projects.router, tags=["projects"])
 app.include_router(files.router, tags=["files"])
