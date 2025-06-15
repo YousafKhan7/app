@@ -62,22 +62,22 @@ export const businessService = {
 
   // Manufacturers
   getManufacturers: async (): Promise<Manufacturer[]> => {
-    const response = await apiClient.get('/manufacturers');
+    const response = await apiClient.get('/settings/manufacturers');
     return response.data.manufacturers;
   },
 
   createManufacturer: async (manufacturer: ManufacturerCreate): Promise<any> => {
-    const response = await apiClient.post('/manufacturers', manufacturer);
+    const response = await apiClient.post('/settings/manufacturers', manufacturer);
     return response.data;
   },
 
   updateManufacturer: async (id: number, manufacturer: ManufacturerCreate): Promise<any> => {
-    const response = await apiClient.put(`/manufacturers/${id}`, manufacturer);
+    const response = await apiClient.put(`/settings/manufacturers/${id}`, manufacturer);
     return response.data;
   },
 
   deleteManufacturer: async (id: number): Promise<any> => {
-    const response = await apiClient.delete(`/manufacturers/${id}`);
+    const response = await apiClient.delete(`/settings/manufacturers/${id}`);
     return response.data;
   },
 
