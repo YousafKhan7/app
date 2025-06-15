@@ -66,7 +66,7 @@ const EditQuoteModal: React.FC<EditQuoteModalProps> = ({
         apiService.getCustomers(),
         apiService.getUsers()
       ]);
-      setCustomers(customersData);
+      setCustomers(customersData.customers);
       setUsers(usersData as User[]);
     } catch (error: any) {
       message.error('Failed to fetch dropdown data');

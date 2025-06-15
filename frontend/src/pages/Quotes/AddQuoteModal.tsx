@@ -67,7 +67,7 @@ const AddQuoteModal: React.FC<AddQuoteModalProps> = ({
   const fetchCustomers = async () => {
     try {
       const customersData = await apiService.getCustomers();
-      setCustomers(customersData);
+      setCustomers(customersData.customers);
     } catch (error: any) {
       message.error('Failed to fetch customers');
     }

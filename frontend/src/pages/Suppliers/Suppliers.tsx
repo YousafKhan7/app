@@ -28,10 +28,10 @@ const Suppliers: React.FC = () => {
   const fetchSuppliers = async () => {
     setLoading(true);
     try {
-      const supplierData = await apiService.getSuppliers();
-      setSuppliers(supplierData);
-      if (supplierData.length > 0 && !selectedSupplier) {
-        setSelectedSupplier(supplierData[0]);
+      const response = await apiService.getSuppliers();
+      setSuppliers(response.suppliers);
+      if (response.suppliers.length > 0 && !selectedSupplier) {
+        setSelectedSupplier(response.suppliers[0]);
       }
     } catch (error: any) {
       showError(error.message || 'Failed to fetch suppliers');
@@ -53,7 +53,7 @@ const Suppliers: React.FC = () => {
     // Update selected supplier with fresh data
     if (selectedSupplier) {
       const updatedSuppliers = await apiService.getSuppliers();
-      const updatedSelectedSupplier = updatedSuppliers.find(s => s.id === selectedSupplier.id);
+      const updatedSelectedSupplier = updatedSuppliers.suppliers.find((s: Supplier) => s.id === selectedSupplier.id);
       if (updatedSelectedSupplier) {
         setSelectedSupplier(updatedSelectedSupplier);
       }

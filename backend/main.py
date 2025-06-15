@@ -27,7 +27,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",  # Vite dev server
         "https://*.vercel.app",   # Vercel deployments
-        "https://yourdomain.com", # Your custom domain
+        "http://*",              # Allow all HTTP domains
+        "https://*",             # Allow all HTTPS domains
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -54,6 +55,10 @@ async def root():
 @app.get("/health")
 async def health_check_endpoint():
     return health_check()
+
+@app.api_route("/{full_path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
+async def catch_all(full_path: str):
+    return {"path": full_path}
 
 if __name__ == "__main__":
     import uvicorn

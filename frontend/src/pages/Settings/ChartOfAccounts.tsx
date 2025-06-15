@@ -113,8 +113,8 @@ const ChartOfAccounts: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const accounts = await apiService.getChartOfAccounts();
-      setData(accounts);
+      const response = await apiService.getChartOfAccounts();
+      setData(response);
     } catch (error: any) {
       showError(error.message || 'Failed to fetch chart of accounts');
     } finally {

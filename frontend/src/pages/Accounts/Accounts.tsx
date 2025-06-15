@@ -205,9 +205,9 @@ const Accounts: React.FC = () => {
   const fetchAccounts = async () => {
     setLoading(true);
     try {
-      const accountsData = await apiService.getAccounts();
-      setAccounts(accountsData);
-      setFilteredAccounts(accountsData);
+      const response = await apiService.getAccounts();
+      setAccounts(response.accounts);
+      setFilteredAccounts(response.accounts);
     } catch (error: any) {
       showError(error.message || 'Failed to fetch accounts');
     } finally {
